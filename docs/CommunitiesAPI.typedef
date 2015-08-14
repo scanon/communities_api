@@ -1,0 +1,4548 @@
+/*
+
+<p>The MG-RAST API covers most of the functionality available through the MG-RAST website, with access to annotations, analyses, metadata and access to the MG-RAST user inbox to view contents as well as upload files. All sequence data and data products from intermediate stages in the analysis pipeline are available for download. Other resources provide services not available through the website, e.g. the m5nr resource lets you query the m5nr database.</p><p>Each query to the API is represented as a URI beginning with "http://kbase.us/services/communities/" and has a defined structure to pass the requests and parameters to the API server.</p><p>The URI queries can be used from the command line, e.g. using curl, in a browser, or incorporated in a shell script or program.</p><p>Each URI has the form</p><pre>"http://kbase.us/services/communities/{version}/{resourcepath}?{querystring}"</pre><p>The {version} value (currently '1') explicitly directs the request to a specific version of the API, if it is omitted the latest API version will be used.</p><p>The resource path is constructed from the path parameters listed below to define a specific resource and the optional query string is used to filter the results obtained for the resource. For example:</p><pre>http://kbase.us/services/communities/1/annotation/sequence/mgm4447943.3?evalue=10&type=organism&source=SwissProt</pre><p>In this example the resource path "annotation/sequence/mgm4447943.3" defines a request for the annotated sequences for the MG-RAST job with ID 4447943.3.</p><p>The optional query string "evalue=10&type=organism&source=SwissProt" modifies the results by setting an evalue cutoff, annotation type and database source.</p><p>The API provides an authentication mechanism for access to private MG-RAST jobs and users' inbox. The 'auth_key' (or 'webkey') is a 25 character long string  (e.g. 'j6FNL61ekNarTgqupMma6eMx5') which is used by the API to identify an MG-RAST user account and determine access rights to metagenomes. Note that the auth_key is valid for a limited time after which queries using the key will be rejected. You can create a new auth_key or view the expiration date and time of an existing auth_key on the MG-RAST website. An account can have only one valid auth_key and creating a new key will invalidate an existing key.</p><p>All public data in MG-RAST is available without an auth_key. All API queries for private data which either do not have an auth_key or use an invalid or expired auth_key will get a "insufficient permissions to view this data" response.</p><p>The auth_key can be included in the query string like:</p><pre>
+http://kbase.us/services/communities/1/annotation/sequence/mgm4447943.3?evalue=10&type=organism&source=SwissProt&auth=j6FNL61ekNarTgqupMma6eMx5</pre><p>or in a request using curl like:</p><pre>curl -X GET -H "auth: j6FNL61ekNarTgqupMma6eMx5" "http://kbase.us/services/communities/1/annotation/sequence/mgm4447943.3?evalue=10&type=organism&source=SwissProt"</pre><p>Note that for the curl command the quotes are necessary for the query to be passed to the API correctly.</p><p>If an optional parameter passed through the query string has a list of values only the first will be used. When multiple values are required, e.g. for multiple md5 checksum values, they can be passed to the API like:</p><pre>curl -X POST -d '{"data":["000821a2e2f63df1a3873e4b280002a8","15bf1950bd9867099e72ea6516e3d602"]}' "http://kbase.us/services/communities/m5nr/md5"</pre><p>In some cases, the data requested is in the form of a list with a large number of entries. In these cases the limit and offset parameters can be used to step through the list, for example:</p><pre>http://kbase.us/services/communities/1/project?order=name&limit=20&offset=100</pre><p>will limit the number of entries returned to 20 with an offset of 100. If these parameters are not provided default values of limit=10 and offset=0 are used. The returned JSON structure will contain the 'next' and 'prev' (previous) URIs to simplify stepping through the list.</p><p>The data returned may be plain text, compressed gzipped files or a JSON structure.</p><p>Most API queries are 'synchronous' and results are returned immediately. Some queries may require a substantial time to compute results, in these cases you can select the asynchronous option by adding '&asynchronous=1' to the end of the query string. This query will then return a URL which will return the query results when they are ready.</p>
+
+*/
+module CommunitiesAPI : CommunitiesAPI {
+
+/*
+A set of parameters the GetAnnotationSequence method. This is a mapping of key value pairs, defined as follows:
+
+int evalue
+
+	negative exponent value for maximum e-value cutoff: default is 5
+
+int length
+
+	value for minimum alignment length cutoff: default is 15
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+	Subsystems - ontology database, type ontology only
+	NOG - ontology database, type ontology only
+	COG - ontology database, type ontology only
+	KO - ontology database, type ontology only
+
+string filter
+
+	text string to filter annotations by: only return those that contain text
+
+string type
+
+This parameter value can be chosen from the following (the first being default):
+
+	organism - return organism data
+	function - return function data
+	ontology - return ontology data
+	feature - return feature data
+	md5 - return md5sum data
+
+string id
+
+	unique metagenome identifier
+
+int identity
+
+	percent value for minimum % identity cutoff: default is 60
+
+string filter_level
+
+	hierarchal level to filter annotations by, for organism or ontology only
+
+*/
+	typedef structure {
+		int evalue;
+		int length;
+		string source;
+		string filter;
+		string type;
+		string id;
+		int identity;
+		string filter_level;
+	} GetAnnotationSequenceParams;
+
+/*
+Method AnnotationSequence
+
+	tab delimited annotated sequence stream
+
+*/
+
+	typedef structure {
+		mapping<string, string> streaming_text;
+	} AnnotationSequence;
+
+/*
+A set of parameters the GetAnnotationSimilarity method. This is a mapping of key value pairs, defined as follows:
+
+string filter
+
+	text string to filter annotations by: only return those that contain text
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+	Subsystems - ontology database, type ontology only
+	NOG - ontology database, type ontology only
+	COG - ontology database, type ontology only
+	KO - ontology database, type ontology only
+
+int length
+
+	value for minimum alignment length cutoff: default is 15
+
+int evalue
+
+	negative exponent value for maximum e-value cutoff: default is 5
+
+string filter_level
+
+	hierarchal level to filter annotations by, for organism or ontology only
+
+int identity
+
+	percent value for minimum % identity cutoff: default is 60
+
+string id
+
+	unique metagenome identifier
+
+string type
+
+This parameter value can be chosen from the following (the first being default):
+
+	organism - return organism data
+	function - return function data
+	ontology - return ontology data
+	feature - return feature data
+	md5 - return md5sum data
+
+*/
+	typedef structure {
+		string filter;
+		string source;
+		int length;
+		int evalue;
+		string filter_level;
+		int identity;
+		string id;
+		string type;
+	} GetAnnotationSimilarityParams;
+
+/*
+Method AnnotationSimilarity
+
+	tab delimited blast m8 with annotation
+
+*/
+
+	typedef structure {
+		mapping<string, string> streaming_text;
+	} AnnotationSimilarity;
+
+/*
+A set of parameters the GetComputeAlphadiversity method. This is a mapping of key value pairs, defined as follows:
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+
+string id
+
+	unique object identifier
+
+string level
+
+This parameter value can be chosen from the following (the first being default):
+
+	strain - bottom organism taxonomic level
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+*/
+	typedef structure {
+		string source;
+		string id;
+		string level;
+	} GetComputeAlphadiversityParams;
+
+/*
+Method ComputeAlphadiversity
+
+	unique metagenome identifier
+
+	alpha diversity value
+
+	resource location of this object instance
+
+*/
+
+	typedef structure {
+		string id;
+		float data;
+		string url;
+	} ComputeAlphadiversity;
+
+/*
+A set of parameters the PostComputeNormalize method. This is a mapping of key value pairs, defined as follows:
+
+string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+	DESeq_blind - DESeq_blind normalization method
+	standardize - standardize normalization method
+	quantile - quantile normalization method
+	DESeq_per_condition - DESeq_per_condition normalization method
+	DESeq_pooled - DESeq_pooled normalization method
+	DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+list<list<int>> data
+
+	raw value
+
+list<string> columns
+
+	column id
+
+list<string> rows
+
+	row id
+
+*/
+	typedef structure {
+		string norm;
+		list<list<int>> data;
+		list<string> columns;
+		list<string> rows;
+	} PostComputeNormalizeParams;
+
+/*
+Method ComputeNormalize
+
+	row id
+
+	column id
+
+	normalized value
+
+*/
+
+	typedef structure {
+		list<string> rows;
+		list<string> columns;
+		list<list<float>> data;
+	} ComputeNormalize;
+
+/*
+A set of parameters the PostComputeSignificance method. This is a mapping of key value pairs, defined as follows:
+
+list<string> rows
+
+	row id
+
+list<string> groups
+
+	group name
+
+int raw
+
+	option to use raw data (not normalize)
+
+list<list<int>> data
+
+	raw value
+
+string test
+
+This parameter value can be chosen from the following (the first being default):
+
+	Kruskal-Wallis - Kruskal-Wallis significance testing method
+	t-test-paired - t-test-paired significance testing method
+	Wilcoxon-paired - Wilcoxon-paired significance testing method
+	t-test-unpaired - t-test-unpaired significance testing method
+	Mann-Whitney-unpaired-Wilcoxon - Mann-Whitney-unpaired-Wilcoxon significance testing method
+	ANOVA-one-way - ANOVA-one-way significance testing method
+
+list<string> columns
+
+	column id
+
+string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+	DESeq_blind - DESeq_blind normalization method
+	standardize - standardize normalization method
+	quantile - quantile normalization method
+	DESeq_per_condition - DESeq_per_condition normalization method
+	DESeq_pooled - DESeq_pooled normalization method
+	DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+*/
+	typedef structure {
+		list<string> rows;
+		list<string> groups;
+		int raw;
+		list<list<int>> data;
+		string test;
+		list<string> columns;
+		string norm;
+	} PostComputeSignificanceParams;
+
+/*
+Method ComputeSignificance
+
+	significance value
+
+	column name
+
+	row name
+
+*/
+
+	typedef structure {
+		list<list<float>> data;
+		list<string> columns;
+		list<string> rows;
+	} ComputeSignificance;
+
+/*
+A set of parameters the PostComputeHeatmap method. This is a mapping of key value pairs, defined as follows:
+
+string distance
+
+This parameter value can be chosen from the following (the first being default):
+
+	bray-curtis - bray-curtis distance method
+	euclidean - euclidean distance method
+	maximum - maximum distance method
+	manhattan - manhattan distance method
+	canberra - canberra distance method
+	minkowski - minkowski distance method
+	difference - difference distance method
+
+list<string> rows
+
+	row id
+
+int raw
+
+	option to use raw data (not normalize)
+
+list<list<float>> data
+
+	raw or normalized value
+
+list<string> columns
+
+	column id
+
+string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+	DESeq_blind - DESeq_blind normalization method
+	standardize - standardize normalization method
+	quantile - quantile normalization method
+	DESeq_per_condition - DESeq_per_condition normalization method
+	DESeq_pooled - DESeq_pooled normalization method
+	DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+string cluster
+
+This parameter value can be chosen from the following (the first being default):
+
+	ward - ward cluster method
+	single - single cluster method
+	complete - complete cluster method
+	mcquitty - mcquitty cluster method
+	median - median cluster method
+	centroid - centroid cluster method
+
+*/
+	typedef structure {
+		string distance;
+		list<string> rows;
+		int raw;
+		list<list<float>> data;
+		list<string> columns;
+		string norm;
+		string cluster;
+	} PostComputeHeatmapParams;
+
+/*
+Method ComputeHeatmap
+
+	column id
+
+	normalized value
+
+	dendrogram object for rows
+
+	row id
+
+	dendrogram object for columns
+
+	row id index
+
+	column id index
+
+*/
+
+	typedef structure {
+		list<string> columns;
+		list<list<float>> data;
+		mapping<string, string> rowdend;
+		list<string> rows;
+		mapping<string, string> coldend;
+		list<float> rowindex;
+		list<float> colindex;
+	} ComputeHeatmap;
+
+/*
+A set of parameters the PostComputePcoa method. This is a mapping of key value pairs, defined as follows:
+
+string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+	DESeq_blind - DESeq_blind normalization method
+	standardize - standardize normalization method
+	quantile - quantile normalization method
+	DESeq_per_condition - DESeq_per_condition normalization method
+	DESeq_pooled - DESeq_pooled normalization method
+	DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+list<list<float>> data
+
+	raw or normalized value
+
+list<string> columns
+
+	column id
+
+list<string> rows
+
+	row id
+
+string distance
+
+This parameter value can be chosen from the following (the first being default):
+
+	bray-curtis - bray-curtis distance method
+	euclidean - euclidean distance method
+	maximum - maximum distance method
+	manhattan - manhattan distance method
+	canberra - canberra distance method
+	minkowski - minkowski distance method
+	difference - difference distance method
+
+int raw
+
+	option to use raw data (not normalize)
+
+*/
+	typedef structure {
+		string norm;
+		list<list<float>> data;
+		list<string> columns;
+		list<string> rows;
+		string distance;
+		int raw;
+	} PostComputePcoaParams;
+
+/*
+Method ComputePcoa
+
+	average principal component value
+
+	pcoa object
+
+*/
+
+	typedef structure {
+		list<float> pco;
+		list<mapping<string, string>> data;
+	} ComputePcoa;
+
+/*
+A set of parameters the GetDownloadInstance method. This is a mapping of key value pairs, defined as follows:
+
+int link
+
+	if true return one time link for download and not file stream
+
+string file
+
+	file name or identifier
+
+string id
+
+	unique metagenome identifier
+
+*/
+	typedef structure {
+		int link;
+		string file;
+		string id;
+	} GetDownloadInstanceParams;
+
+/*
+Method DownloadInstance
+
+	requested analysis file
+
+*/
+
+	typedef structure {
+		string data;
+	} DownloadInstance;
+
+/*
+A set of parameters the GetDownloadSetlist method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	unique metagenome identifier
+
+string stage
+
+	stage name or identifier
+
+*/
+	typedef structure {
+		string id;
+		string stage;
+	} GetDownloadSetlistParams;
+
+/*
+Method DownloadSetlist
+
+	unique identifier of file in stage
+
+	unique metagenome identifier
+
+	name of the analysis file
+
+	url for retrieving this analysis file
+
+	name of the stage in processing of this file
+
+	type of the analysis file within a stage, i.e. passed or removed for quality control steps
+
+	three digit numerical identifier of the stage
+
+*/
+
+	typedef structure {
+		string file_id;
+		string id;
+		string file_name;
+		string url;
+		string stage_name;
+		string stage_type;
+		string stage_id;
+	} DownloadSetlist;
+
+/*
+A set of parameters the GetHeartbeatInstance method. This is a mapping of key value pairs, defined as follows:
+
+string service
+
+This parameter value can be chosen from the following (the first being default):
+
+	FTP - file server
+	website - MG-RAST website
+	SHOCK - object storage
+	SHOCKDB - object storage mongodb
+	AWE - worker engine
+	AWEDB - worker engine mongodb
+	M5NR - non-redundant sequence database
+	solr - search engine
+	postgres - analysis database
+	mySQL - job database
+
+*/
+	typedef structure {
+		string service;
+	} GetHeartbeatInstanceParams;
+
+/*
+Method HeartbeatInstance
+
+	service is up or not
+
+	cv
+
+*/
+
+	typedef structure {
+		int status;
+		string service;
+	} HeartbeatInstance;
+
+/*
+A set of parameters the GetInboxView method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string uuid
+
+	RFC 4122 UUID for file
+
+*/
+	typedef structure {
+		string auth;
+		string uuid;
+	} GetInboxViewParams;
+
+/*
+Method InboxView
+
+	timestamp for return of this query
+
+	resource location of this object instance
+
+	list of file objects
+
+	user login
+
+	user id
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string url;
+		list<mapping<string, string>> files;
+		string user;
+		string id;
+	} InboxView;
+
+/*
+A set of parameters the GetInboxView_pending method. This is a mapping of key value pairs, defined as follows:
+
+int pending
+
+	If true show the given state
+
+int completed
+
+	If true show the given state
+
+int suspend
+
+	If true show the given state
+
+int deleted
+
+	If true show the given state
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+int in_progress
+
+	If true show the given state
+
+int queued
+
+	If true show the given state
+
+*/
+	typedef structure {
+		int pending;
+		int completed;
+		int suspend;
+		int deleted;
+		string auth;
+		int in_progress;
+		int queued;
+	} GetInboxView_pendingParams;
+
+/*
+Method InboxView_pending
+
+	timestamp for return of this query
+
+	user id
+
+	status message
+
+	user login
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string id;
+		string status;
+		string user;
+	} InboxView_pending;
+
+/*
+A set of parameters the PostInboxUpload method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string upload
+
+	file to upload to inbox
+
+*/
+	typedef structure {
+		string auth;
+		string upload;
+	} PostInboxUploadParams;
+
+/*
+Method InboxUpload
+
+	status message
+
+	user id
+
+	user login
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string status;
+		string id;
+		string user;
+		string timestamp;
+	} InboxUpload;
+
+/*
+A set of parameters the DeleteInboxDelete method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string uuid
+
+	RFC 4122 UUID for file
+
+*/
+	typedef structure {
+		string auth;
+		string uuid;
+	} DeleteInboxDeleteParams;
+
+/*
+Method InboxDelete
+
+	timestamp for return of this query
+
+	user login
+
+	status message
+
+	user id
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string user;
+		string status;
+		string id;
+	} InboxDelete;
+
+/*
+A set of parameters the GetInboxFile_info method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string uuid
+
+	RFC 4122 UUID for file
+
+*/
+	typedef structure {
+		string auth;
+		string uuid;
+	} GetInboxFile_infoParams;
+
+/*
+Method InboxFile_info
+
+	user id
+
+	status message
+
+	user login
+
+	key value pairs describing file info
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string id;
+		string status;
+		string user;
+		mapping<string, string> stats_info;
+		string timestamp;
+	} InboxFile_info;
+
+/*
+A set of parameters the GetInboxValidate_metadata method. This is a mapping of key value pairs, defined as follows:
+
+string uuid
+
+	RFC 4122 UUID for file
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+*/
+	typedef structure {
+		string uuid;
+		string auth;
+	} GetInboxValidate_metadataParams;
+
+/*
+Method InboxValidate_metadata
+
+	user login
+
+	user id
+
+	status message
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string user;
+		string id;
+		string status;
+		string timestamp;
+	} InboxValidate_metadata;
+
+/*
+A set of parameters the GetInboxSeq_stats method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string uuid
+
+	RFC 4122 UUID for sequence file
+
+*/
+	typedef structure {
+		string auth;
+		string uuid;
+	} GetInboxSeq_statsParams;
+
+/*
+Method InboxSeq_stats
+
+	timestamp for return of this query
+
+	url/id of awe job
+
+	status message
+
+	user id
+
+	user login
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string awe_id;
+		string status;
+		string id;
+		string user;
+	} InboxSeq_stats;
+
+/*
+A set of parameters the PostInboxRename method. This is a mapping of key value pairs, defined as follows:
+
+string name
+
+	new name for file
+
+string file
+
+	RFC 4122 UUID for file
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string uuid
+
+	RFC 4122 UUID for file
+
+*/
+	typedef structure {
+		string name;
+		string file;
+		string auth;
+		string uuid;
+	} PostInboxRenameParams;
+
+/*
+Method InboxRename
+
+	timestamp for return of this query
+
+	user id
+
+	status message
+
+	user login
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string id;
+		string status;
+		string user;
+	} InboxRename;
+
+/*
+A set of parameters the PostInboxSff_to_fastq method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string sff_file
+
+	RFC 4122 UUID for sff file
+
+*/
+	typedef structure {
+		string auth;
+		string sff_file;
+	} PostInboxSff_to_fastqParams;
+
+/*
+Method InboxSff_to_fastq
+
+	url/id of awe job
+
+	user login
+
+	user id
+
+	status message
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string awe_id;
+		string user;
+		string id;
+		string status;
+		string timestamp;
+	} InboxSff_to_fastq;
+
+/*
+A set of parameters the PostInboxDemultiplex method. This is a mapping of key value pairs, defined as follows:
+
+string index_file
+
+	RFC 4122 UUID for index file (optional)
+
+string barcode_file
+
+	RFC 4122 UUID for barcode mapping file
+
+int rc_index
+
+	If true barcodes in index file are reverse compliment of mapping file, default is false
+
+string seq_file
+
+	RFC 4122 UUID for sequence file
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+*/
+	typedef structure {
+		string index_file;
+		string barcode_file;
+		int rc_index;
+		string seq_file;
+		string auth;
+	} PostInboxDemultiplexParams;
+
+/*
+Method InboxDemultiplex
+
+	timestamp for return of this query
+
+	url/id of awe job
+
+	user id
+
+	status message
+
+	user login
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string awe_id;
+		string id;
+		string status;
+		string user;
+	} InboxDemultiplex;
+
+/*
+A set of parameters the PostInboxPair_join method. This is a mapping of key value pairs, defined as follows:
+
+int retain
+
+	If true retain non-overlapping sequences, default is false
+
+string output
+
+	prefix for output file, default is a random uuid
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string pair_file_1
+
+	RFC 4122 UUID for pair 1 file
+
+string pair_file_2
+
+	RFC 4122 UUID for pair 2 file
+
+*/
+	typedef structure {
+		int retain;
+		string output;
+		string auth;
+		string pair_file_1;
+		string pair_file_2;
+	} PostInboxPair_joinParams;
+
+/*
+Method InboxPair_join
+
+	timestamp for return of this query
+
+	user id
+
+	status message
+
+	user login
+
+	url/id of awe job
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string id;
+		string status;
+		string user;
+		string awe_id;
+	} InboxPair_join;
+
+/*
+A set of parameters the PostInboxPair_join_demultiplex method. This is a mapping of key value pairs, defined as follows:
+
+string pair_file_1
+
+	RFC 4122 UUID for pair 1 file
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string pair_file_2
+
+	RFC 4122 UUID for pair 2 file
+
+int rc_index
+
+	If true barcodes in index file are reverse compliment of mapping file, default is false
+
+string barcode_file
+
+	RFC 4122 UUID for barcode mapping file
+
+int retain
+
+	If true retain non-overlapping sequences, default is false
+
+string index_file
+
+	RFC 4122 UUID for index file
+
+*/
+	typedef structure {
+		string pair_file_1;
+		string auth;
+		string pair_file_2;
+		int rc_index;
+		string barcode_file;
+		int retain;
+		string index_file;
+	} PostInboxPair_join_demultiplexParams;
+
+/*
+Method InboxPair_join_demultiplex
+
+	status message
+
+	user id
+
+	user login
+
+	url/id of awe job
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string status;
+		string id;
+		string user;
+		string awe_id;
+		string timestamp;
+	} InboxPair_join_demultiplex;
+
+/*
+A set of parameters the GetLibraryQuery method. This is a mapping of key value pairs, defined as follows:
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int limit
+
+	maximum number of items requested
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+
+string order
+
+This parameter value can be chosen from the following (the first being default):
+
+	id - return data objects ordered by id
+	name - return data objects ordered by name
+
+*/
+	typedef structure {
+		int offset;
+		int limit;
+		string verbosity;
+		string order;
+	} GetLibraryQueryParams;
+
+/*
+Method LibraryQuery
+
+	link to the next set or null if this is the last set
+
+	zero based index of the first returned data item
+
+	link to the previous set or null if this is the first set
+
+	name of the attribute the returned data is ordered by
+
+	maximum number of data items returned, default is 10
+
+	total number of available data items
+
+	list of the library objects
+
+*/
+
+	typedef structure {
+		string prev;
+		int offset;
+		string next;
+		string order;
+		int limit;
+		int total_count;
+		list<mapping<string, string>> data;
+	} LibraryQuery;
+
+/*
+A set of parameters the GetLibraryInstance method. This is a mapping of key value pairs, defined as follows:
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+	verbose - returns a standard subselection of metadata
+	full - returns all connected metadata
+
+string id
+
+	unique object identifier
+
+*/
+	typedef structure {
+		string verbosity;
+		string id;
+	} GetLibraryInstanceParams;
+
+/*
+Method LibraryInstance
+
+	version of the object
+
+	reference to the related sample object
+
+	reference to the project object
+
+	reference to the related metagenome object
+
+	key value pairs describing metadata
+
+	unique object identifier
+
+	human readable identifier
+
+	resource location of this object instance
+
+	time the object was first created
+
+*/
+
+	typedef structure {
+		int version;
+		string sample;
+		string project;
+		string metagenome;
+		mapping<string, string> metadata;
+		string id;
+		string name;
+		string url;
+		string created;
+	} LibraryInstance;
+
+/*
+A set of parameters the GetM5nrOntology method. This is a mapping of key value pairs, defined as follows:
+
+string filter
+
+	text of ontology group (filter_level) to filter by
+
+string min_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	function - bottom function ontology level
+	level3 - function ontology level
+	level2 - function ontology level
+	level1 - top function ontology level
+
+int version
+
+	M5NR version, default 10
+
+int exact
+
+	if true return only those ontologies that exactly match filter, default is false
+
+string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	function - bottom function ontology level
+	level3 - function ontology level
+	level2 - function ontology level
+	level1 - top function ontology level
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	Subsystems - ontology database, type ontology only
+	NOG - ontology database, type ontology only
+	COG - ontology database, type ontology only
+	KO - ontology database, type ontology only
+
+*/
+	typedef structure {
+		string filter;
+		string min_level;
+		int version;
+		int exact;
+		string filter_level;
+		string source;
+	} GetM5nrOntologyParams;
+
+/*
+Method M5nrOntology
+
+	version of M5NR
+
+	resource location of this object instance
+
+	ontology object
+
+*/
+
+	typedef structure {
+		int version;
+		string url;
+		list<mapping<string, string>> data;
+	} M5nrOntology;
+
+/*
+A set of parameters the GetM5nrTaxonomy method. This is a mapping of key value pairs, defined as follows:
+
+int exact
+
+	if true return only those taxonomies that exactly match filter, default is false
+
+string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+int version
+
+	M5NR version, default 10
+
+string filter
+
+	text of taxonomy group (filter_level) to filter by
+
+string min_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+*/
+	typedef structure {
+		int exact;
+		string filter_level;
+		int version;
+		string filter;
+		string min_level;
+	} GetM5nrTaxonomyParams;
+
+/*
+Method M5nrTaxonomy
+
+	resource location of this object instance
+
+	version of M5NR
+
+	taxonomy object
+
+*/
+
+	typedef structure {
+		string url;
+		int version;
+		list<mapping<string, string>> data;
+	} M5nrTaxonomy;
+
+/*
+A set of parameters the GetM5nrSources method. This is a mapping of key value pairs, defined as follows:
+
+int version
+
+	M5NR version, default 10
+
+*/
+	typedef structure {
+		int version;
+	} GetM5nrSourcesParams;
+
+/*
+Method M5nrSources
+
+	version of M5NR
+
+	resource location of this object instance
+
+	source object
+
+*/
+
+	typedef structure {
+		int version;
+		string url;
+		list<mapping<string, string>> data;
+	} M5nrSources;
+
+/*
+A set of parameters the GetM5nrAccession method. This is a mapping of key value pairs, defined as follows:
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string id
+
+	unique identifier from source DB
+
+int limit
+
+	maximum number of items requested
+
+int version
+
+	M5NR version, default 10
+
+int offset
+
+	zero based index of the first data object to be returned
+
+*/
+	typedef structure {
+		string order;
+		string id;
+		int limit;
+		int version;
+		int offset;
+	} GetM5nrAccessionParams;
+
+/*
+Method M5nrAccession
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	total number of available data items
+
+*/
+
+	typedef structure {
+		string next;
+		int version;
+		list<mapping<string, string>> data;
+		int limit;
+		int offset;
+		string prev;
+		string url;
+		int total_count;
+	} M5nrAccession;
+
+/*
+A set of parameters the GetM5nrAlias method. This is a mapping of key value pairs, defined as follows:
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+int limit
+
+	maximum number of items requested
+
+string text
+
+	text string of partial alias
+
+int version
+
+	M5NR version, default 10
+
+int exact
+
+	if true return only those annotations that exactly match input text, default is false
+
+int offset
+
+	zero based index of the first data object to be returned
+
+*/
+	typedef structure {
+		string order;
+		string source;
+		int limit;
+		string text;
+		int version;
+		int exact;
+		int offset;
+	} GetM5nrAliasParams;
+
+/*
+Method M5nrAlias
+
+	total number of available data items
+
+	zero based index of the first returned data item
+
+	resource location of this object instance
+
+	link to the next set or null if this is the last set
+
+	maximum number of data items returned, default is 10
+
+	annotation object
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+*/
+
+	typedef structure {
+		int total_count;
+		int offset;
+		string url;
+		string prev;
+		int limit;
+		list<mapping<string, string>> data;
+		string next;
+		int version;
+	} M5nrAlias;
+
+/*
+A set of parameters the GetM5nrMd5 method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	unique identifier in form of md5 checksum
+
+int limit
+
+	maximum number of items requested
+
+int version
+
+	M5NR version, default 10
+
+int sequence
+
+	if true return sequence output, else return annotation output, default is false
+
+string format
+
+This parameter value can be chosen from the following (the first being default):
+
+	fasta - return sequences in fasta format
+	json - return sequences in json struct
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+int offset
+
+	zero based index of the first data object to be returned
+
+*/
+	typedef structure {
+		string id;
+		int limit;
+		int version;
+		int sequence;
+		string format;
+		string order;
+		string source;
+		int offset;
+	} GetM5nrMd5Params;
+
+/*
+Method M5nrMd5
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+	maximum number of data items returned, default is 10
+
+	annotation object
+
+	zero based index of the first returned data item
+
+	resource location of this object instance
+
+	link to the next set or null if this is the last set
+
+	total number of available data items
+
+*/
+
+	typedef structure {
+		string next;
+		int version;
+		int limit;
+		list<mapping<string, string>> data;
+		int offset;
+		string url;
+		string prev;
+		int total_count;
+	} M5nrMd5;
+
+/*
+A set of parameters the GetM5nrFunction method. This is a mapping of key value pairs, defined as follows:
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+int exact
+
+	if true return only those annotations that exactly match input text, default is false
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int limit
+
+	maximum number of items requested
+
+int inverse
+
+	if true return only those annotations that do not match input text, default is false
+
+string text
+
+	text string of partial function name
+
+int version
+
+	M5NR version, default 10
+
+*/
+	typedef structure {
+		string order;
+		string source;
+		int exact;
+		int offset;
+		int limit;
+		int inverse;
+		string text;
+		int version;
+	} GetM5nrFunctionParams;
+
+/*
+Method M5nrFunction
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	total number of available data items
+
+*/
+
+	typedef structure {
+		string next;
+		int version;
+		list<mapping<string, string>> data;
+		int limit;
+		int offset;
+		string prev;
+		string url;
+		int total_count;
+	} M5nrFunction;
+
+/*
+A set of parameters the GetM5nrOrganism method. This is a mapping of key value pairs, defined as follows:
+
+string tax_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	strain - bottom organism taxonomic level
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+int exact
+
+	if true return only those annotations that exactly match input text, default is false
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int limit
+
+	maximum number of items requested
+
+string text
+
+	text string of partial organism name
+
+int version
+
+	M5NR version, default 10
+
+int inverse
+
+	if true return only those annotations that do not match input text, default is false
+
+*/
+	typedef structure {
+		string tax_level;
+		string order;
+		string source;
+		int exact;
+		int offset;
+		int limit;
+		string text;
+		int version;
+		int inverse;
+	} GetM5nrOrganismParams;
+
+/*
+Method M5nrOrganism
+
+	total number of available data items
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+*/
+
+	typedef structure {
+		int total_count;
+		int offset;
+		string prev;
+		string url;
+		list<mapping<string, string>> data;
+		int limit;
+		string next;
+		int version;
+	} M5nrOrganism;
+
+/*
+A set of parameters the GetM5nrSequence method. This is a mapping of key value pairs, defined as follows:
+
+string text
+
+	text string of protein sequence
+
+int version
+
+	M5NR version, default 10
+
+int offset
+
+	zero based index of the first data object to be returned
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+int limit
+
+	maximum number of items requested
+
+*/
+	typedef structure {
+		string text;
+		int version;
+		int offset;
+		string order;
+		string source;
+		int limit;
+	} GetM5nrSequenceParams;
+
+/*
+Method M5nrSequence
+
+	total number of available data items
+
+	zero based index of the first returned data item
+
+	resource location of this object instance
+
+	link to the next set or null if this is the last set
+
+	maximum number of data items returned, default is 10
+
+	annotation object
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+*/
+
+	typedef structure {
+		int total_count;
+		int offset;
+		string url;
+		string prev;
+		int limit;
+		list<mapping<string, string>> data;
+		string next;
+		int version;
+	} M5nrSequence;
+
+/*
+A set of parameters the PostM5nrAccession method. This is a mapping of key value pairs, defined as follows:
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int version
+
+	M5NR version, default 10
+
+list<string> data
+
+	unique identifier from source DB
+
+int limit
+
+	maximum number of items requested
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+*/
+	typedef structure {
+		int offset;
+		int version;
+		list<string> data;
+		int limit;
+		string order;
+	} PostM5nrAccessionParams;
+
+/*
+Method M5nrAccession
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+	total number of available data items
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+*/
+
+	typedef structure {
+		list<mapping<string, string>> data;
+		int limit;
+		string next;
+		int version;
+		int total_count;
+		int offset;
+		string prev;
+		string url;
+	} M5nrAccession;
+
+/*
+A set of parameters the PostM5nrAlias method. This is a mapping of key value pairs, defined as follows:
+
+string source
+
+	source name to restrict search by
+
+list<string> data
+
+	text string of partial alias ID
+
+int limit
+
+	maximum number of items requested
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int exact
+
+	if true return only those annotations that exactly match input text, default is false
+
+int version
+
+	M5NR version, default 10
+
+*/
+	typedef structure {
+		string source;
+		list<string> data;
+		int limit;
+		string order;
+		int offset;
+		int exact;
+		int version;
+	} PostM5nrAliasParams;
+
+/*
+Method M5nrAlias
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	total number of available data items
+
+*/
+
+	typedef structure {
+		string next;
+		int version;
+		list<mapping<string, string>> data;
+		int limit;
+		int offset;
+		string prev;
+		string url;
+		int total_count;
+	} M5nrAlias;
+
+/*
+A set of parameters the PostM5nrMd5 method. This is a mapping of key value pairs, defined as follows:
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int version
+
+	M5NR version, default 10
+
+int limit
+
+	maximum number of items requested
+
+string source
+
+	source name to restrict search by
+
+list<string> data
+
+	unique identifier in form of md5 checksum
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+int sequence
+
+	if true return sequence output, else return annotation output, default is false
+
+*/
+	typedef structure {
+		int offset;
+		int version;
+		int limit;
+		string source;
+		list<string> data;
+		string order;
+		int sequence;
+	} PostM5nrMd5Params;
+
+/*
+Method M5nrMd5
+
+	version of M5NR
+
+	link to the previous set or null if this is the first set
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	zero based index of the first returned data item
+
+	total number of available data items
+
+*/
+
+	typedef structure {
+		int version;
+		string next;
+		list<mapping<string, string>> data;
+		int limit;
+		string prev;
+		string url;
+		int offset;
+		int total_count;
+	} M5nrMd5;
+
+/*
+A set of parameters the PostM5nrFunction method. This is a mapping of key value pairs, defined as follows:
+
+int version
+
+	M5NR version, default 10
+
+int inverse
+
+	if true return only those annotations that do not match input text, default is false
+
+int limit
+
+	maximum number of items requested
+
+list<string> data
+
+	text string of partial function name
+
+list<string> md5s
+
+	md5 to constrain search by
+
+int exact
+
+	if true return only those annotations that exactly match input text, default is false
+
+int offset
+
+	zero based index of the first data object to be returned
+
+string source
+
+	source name to restrict search by
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+*/
+	typedef structure {
+		int version;
+		int inverse;
+		int limit;
+		list<string> data;
+		list<string> md5s;
+		int exact;
+		int offset;
+		string source;
+		string order;
+	} PostM5nrFunctionParams;
+
+/*
+Method M5nrFunction
+
+	maximum number of data items returned, default is 10
+
+	annotation object
+
+	version of M5NR
+
+	link to the previous set or null if this is the first set
+
+	total number of available data items
+
+	resource location of this object instance
+
+	link to the next set or null if this is the last set
+
+	zero based index of the first returned data item
+
+*/
+
+	typedef structure {
+		int limit;
+		list<mapping<string, string>> data;
+		int version;
+		string next;
+		int total_count;
+		string url;
+		string prev;
+		int offset;
+	} M5nrFunction;
+
+/*
+A set of parameters the PostM5nrOrganism method. This is a mapping of key value pairs, defined as follows:
+
+list<string> md5s
+
+	md5 to constrain search by
+
+int limit
+
+	maximum number of items requested
+
+list<string> data
+
+	text string of partial organism name
+
+int inverse
+
+	if true return only those annotations that do not match input text, default is false
+
+int version
+
+	M5NR version, default 10
+
+string tax_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	strain - bottom organism taxonomic level
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+int offset
+
+	zero based index of the first data object to be returned
+
+int exact
+
+	if true return only those annotations that exactly match input text, default is false
+
+*/
+	typedef structure {
+		list<string> md5s;
+		int limit;
+		list<string> data;
+		int inverse;
+		int version;
+		string tax_level;
+		string order;
+		string source;
+		int offset;
+		int exact;
+	} PostM5nrOrganismParams;
+
+/*
+Method M5nrOrganism
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	zero based index of the first returned data item
+
+	total number of available data items
+
+	version of M5NR
+
+	link to the previous set or null if this is the first set
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+*/
+
+	typedef structure {
+		string prev;
+		string url;
+		int offset;
+		int total_count;
+		int version;
+		string next;
+		list<mapping<string, string>> data;
+		int limit;
+	} M5nrOrganism;
+
+/*
+A set of parameters the PostM5nrSequence method. This is a mapping of key value pairs, defined as follows:
+
+string order
+
+	name of the attribute the returned data is ordered by
+
+string source
+
+	source name to restrict search by
+
+list<string> data
+
+	text string of protein sequence
+
+int limit
+
+	maximum number of items requested
+
+int version
+
+	M5NR version, default 10
+
+int offset
+
+	zero based index of the first data object to be returned
+
+*/
+	typedef structure {
+		string order;
+		string source;
+		list<string> data;
+		int limit;
+		int version;
+		int offset;
+	} PostM5nrSequenceParams;
+
+/*
+Method M5nrSequence
+
+	total number of available data items
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	resource location of this object instance
+
+	annotation object
+
+	maximum number of data items returned, default is 10
+
+	link to the previous set or null if this is the first set
+
+	version of M5NR
+
+*/
+
+	typedef structure {
+		int total_count;
+		int offset;
+		string prev;
+		string url;
+		list<mapping<string, string>> data;
+		int limit;
+		string next;
+		int version;
+	} M5nrSequence;
+
+/*
+A set of parameters the GetMatrixOrganism method. This is a mapping of key value pairs, defined as follows:
+
+int evalue
+
+	negative exponent value for maximum e-value cutoff: default is 5
+
+int length
+
+	value for minimum alignment length cutoff: default is 15
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	M5NR - comprehensive protein database
+	M5RNA - comprehensive RNA database
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+
+string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	function - bottom function ontology level
+	level3 - function ontology level
+	level2 - function ontology level
+	level1 - top function ontology level
+
+string hit_type
+
+This parameter value can be chosen from the following (the first being default):
+
+	all - returns results based on all organisms that map to top hit per read-feature
+	single - returns results based on a single organism for top hit per read-feature
+	lca - returns results based on the Least Common Ancestor for all organisms (M5NR+M5RNA only) that map to hits from a read-feature
+
+string filter_source
+
+This parameter value can be chosen from the following (the first being default):
+
+	Subsystems - ontology database, type ontology only
+	NOG - ontology database, type ontology only
+	COG - ontology database, type ontology only
+	KO - ontology database, type ontology only
+
+int hide_metadata
+
+	if true do not return metagenome metadata in 'columns' object, default is false
+
+string filter
+
+	filter the return results to only include abundances based on genes with this function
+
+string group_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	strain - bottom organism taxonomic level
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+int asynchronous
+
+	if true return process id to query status resource for results, default is false
+
+int taxid
+
+	if true, return annotation ID as NCBI tax id. Only for group_levels with a tax_id
+
+string result_type
+
+This parameter value can be chosen from the following (the first being default):
+
+	abundance - number of reads with hits in annotation
+	evalue - average e-value exponent of hits in annotation
+	identity - average percent identity of hits in annotation
+	length - average alignment length of hits in annotation
+
+int identity
+
+	percent value for minimum % identity cutoff: default is 60
+
+int version
+
+	M5NR version, default 1
+
+string grep
+
+	filter the return results to only include annotations that contain this text
+
+string id
+
+	one or more metagenome or project unique identifier
+
+*/
+	typedef structure {
+		int evalue;
+		int length;
+		string source;
+		string filter_level;
+		string hit_type;
+		string filter_source;
+		int hide_metadata;
+		string filter;
+		string group_level;
+		int asynchronous;
+		int taxid;
+		string result_type;
+		int identity;
+		int version;
+		string grep;
+		string id;
+	} GetMatrixOrganismParams;
+
+/*
+Method MatrixOrganism
+
+	format specification name
+
+	rows object
+
+	result_type of the elements in the return matrix
+
+	columns object
+
+	resource location of this object instance
+
+	data type of the elements in the return matrix
+
+	time the output data was generated
+
+	identifier of the data generator
+
+	type of the data in the return table (taxon, function or gene)
+
+	unique object identifier
+
+	url to the format specification
+
+	the matrix values
+
+	list of the dimension sizes of the return matrix
+
+	type of the data encoding matrix (dense or sparse)
+
+*/
+
+	typedef structure {
+		string format;
+		list<mapping<string, string>> rows;
+		string matrix_element_value;
+		list<mapping<string, string>> columns;
+		string url;
+		string matrix_element_type;
+		string date;
+		string generated_by;
+		string type;
+		string id;
+		string format_url;
+		list<list<float>> data;
+		list<int> shape;
+		string matrix_type;
+	} MatrixOrganism;
+
+/*
+A set of parameters the GetMatrixFunction method. This is a mapping of key value pairs, defined as follows:
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	Subsystems - ontology database, type ontology only
+	NOG - ontology database, type ontology only
+	COG - ontology database, type ontology only
+	KO - ontology database, type ontology only
+
+int evalue
+
+	negative exponent value for maximum e-value cutoff: default is 5
+
+int length
+
+	value for minimum alignment length cutoff: default is 15
+
+int asynchronous
+
+	if true return process id to query status resource for results, default is false
+
+string group_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	function - bottom function ontology level
+	level3 - function ontology level
+	level2 - function ontology level
+	level1 - top function ontology level
+
+string filter
+
+	filter the return results to only include abundances based on genes with this organism
+
+int hide_metadata
+
+	if true do not return metagenome metadata in 'columns' object, default is false
+
+string id
+
+	one or more metagenome or project unique identifier
+
+string grep
+
+	filter the return results to only include annotations that contain this text
+
+string filter_source
+
+This parameter value can be chosen from the following (the first being default):
+
+	M5NR - comprehensive protein database
+	M5RNA - comprehensive RNA database
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+
+string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	strain - bottom organism taxonomic level
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+int version
+
+	M5NR version, default 1
+
+string result_type
+
+This parameter value can be chosen from the following (the first being default):
+
+	abundance - number of reads with hits in annotation
+	evalue - average e-value exponent of hits in annotation
+	identity - average percent identity of hits in annotation
+	length - average alignment length of hits in annotation
+
+int identity
+
+	percent value for minimum % identity cutoff: default is 60
+
+*/
+	typedef structure {
+		string source;
+		int evalue;
+		int length;
+		int asynchronous;
+		string group_level;
+		string filter;
+		int hide_metadata;
+		string id;
+		string grep;
+		string filter_source;
+		string filter_level;
+		int version;
+		string result_type;
+		int identity;
+	} GetMatrixFunctionParams;
+
+/*
+Method MatrixFunction
+
+	url to the format specification
+
+	the matrix values
+
+	unique object identifier
+
+	type of the data in the return table (taxon, function or gene)
+
+	type of the data encoding matrix (dense or sparse)
+
+	list of the dimension sizes of the return matrix
+
+	columns object
+
+	rows object
+
+	result_type of the elements in the return matrix
+
+	format specification name
+
+	identifier of the data generator
+
+	time the output data was generated
+
+	data type of the elements in the return matrix
+
+	resource location of this object instance
+
+*/
+
+	typedef structure {
+		string format_url;
+		list<list<float>> data;
+		string id;
+		string type;
+		string matrix_type;
+		list<int> shape;
+		list<mapping<string, string>> columns;
+		list<mapping<string, string>> rows;
+		string matrix_element_value;
+		string format;
+		string generated_by;
+		string date;
+		string matrix_element_type;
+		string url;
+	} MatrixFunction;
+
+/*
+A set of parameters the GetMatrixFeature method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	one or more metagenome or project unique identifier
+
+int hide_metadata
+
+	if true do not return metagenome metadata in 'columns' object, default is false
+
+int hide_annotation
+
+	if true do not return feature metadata in 'rows' object, default is false
+
+string result_type
+
+This parameter value can be chosen from the following (the first being default):
+
+	abundance - number of reads with hits in annotation
+	evalue - average e-value exponent of hits in annotation
+	identity - average percent identity of hits in annotation
+	length - average alignment length of hits in annotation
+
+int identity
+
+	percent value for minimum % identity cutoff: default is 60
+
+int version
+
+	M5NR version, default 1
+
+string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+	strain - bottom organism taxonomic level
+	species - organism type level
+	genus - organism taxonomic level
+	family - organism taxonomic level
+	order - organism taxonomic level
+	class - organism taxonomic level
+	phylum - organism taxonomic level
+	domain - top organism taxonomic level
+
+int evalue
+
+	negative exponent value for maximum e-value cutoff: default is 5
+
+int length
+
+	value for minimum alignment length cutoff: default is 15
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+
+string filter
+
+	filter the return results to only include abundances based on genes with this organism
+
+int asynchronous
+
+	if true return process id to query status resource for results, default is false
+
+*/
+	typedef structure {
+		string id;
+		int hide_metadata;
+		int hide_annotation;
+		string result_type;
+		int identity;
+		int version;
+		string filter_level;
+		int evalue;
+		int length;
+		string source;
+		string filter;
+		int asynchronous;
+	} GetMatrixFeatureParams;
+
+/*
+Method MatrixFeature
+
+	identifier of the data generator
+
+	time the output data was generated
+
+	resource location of this object instance
+
+	data type of the elements in the return matrix
+
+	columns object
+
+	rows object
+
+	result_type of the elements in the return matrix
+
+	format specification name
+
+	type of the data encoding matrix (dense or sparse)
+
+	list of the dimension sizes of the return matrix
+
+	url to the format specification
+
+	the matrix values
+
+	unique object identifier
+
+	type of the data in the return table (taxon, function or gene)
+
+*/
+
+	typedef structure {
+		string generated_by;
+		string date;
+		string url;
+		string matrix_element_type;
+		list<mapping<string, string>> columns;
+		list<mapping<string, string>> rows;
+		string matrix_element_value;
+		string format;
+		string matrix_type;
+		list<int> shape;
+		string format_url;
+		list<list<float>> data;
+		string id;
+		string type;
+	} MatrixFeature;
+
+/*
+Method MetadataTemplate
+
+	libraries and their metadata
+
+	samples and their metadata
+
+	projects and their metadata
+
+	eps and their metadata
+
+*/
+
+	typedef structure {
+		mapping<string, string> library;
+		mapping<string, string> sample;
+		mapping<string, string> project;
+		mapping<string, string> ep;
+	} MetadataTemplate;
+
+/*
+A set of parameters the GetMetadataCv method. This is a mapping of key value pairs, defined as follows:
+
+string label
+
+	metadata label
+
+string version
+
+	version of CV ontology to use
+
+*/
+	typedef structure {
+		string label;
+		string version;
+	} GetMetadataCvParams;
+
+/*
+Method MetadataCv
+
+	term IDs for metadata
+
+	list of CV terms for metadata
+
+	list of CV terms for metadata
+
+*/
+
+	typedef structure {
+		mapping<string, string> ont_info;
+		mapping<string, string> select;
+		mapping<string, string> ontology;
+	} MetadataCv;
+
+/*
+A set of parameters the GetMetadataOntology method. This is a mapping of key value pairs, defined as follows:
+
+string version
+
+	version of ontology to use
+
+string name
+
+	ontology name
+
+*/
+	typedef structure {
+		string version;
+		string name;
+	} GetMetadataOntologyParams;
+
+/*
+Method MetadataOntology
+
+	info for ontology ID
+
+	version of this ontology
+
+	option to show root when displaying
+
+	ontology ID of root
+
+	ontology name
+
+	this type
+
+*/
+
+	typedef structure {
+		mapping<string, string> nodes;
+		string version;
+		int showRoot;
+		string rootNode;
+		string name;
+		string type;
+	} MetadataOntology;
+
+/*
+A set of parameters the GetMetadataVersion method. This is a mapping of key value pairs, defined as follows:
+
+string label
+
+	metadata label
+
+*/
+	typedef structure {
+		string label;
+	} GetMetadataVersionParams;
+
+/*
+Method MetadataVersion
+
+	version number
+
+	version number
+
+	version number
+
+*/
+
+	typedef structure {
+		list<string> feature;
+		list<string> biome;
+		list<string> material;
+	} MetadataVersion;
+
+/*
+A set of parameters the GetMetadataView method. This is a mapping of key value pairs, defined as follows:
+
+string label
+
+	valid metadata label
+
+*/
+	typedef structure {
+		string label;
+	} GetMetadataViewParams;
+
+/*
+Method MetadataView
+
+	metadata value
+
+	metadata label
+
+	count of unique values
+
+*/
+
+	typedef structure {
+		list<string> values;
+		string label;
+		int total;
+	} MetadataView;
+
+/*
+A set of parameters the GetMetadataExport method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	unique object identifier
+
+*/
+	typedef structure {
+		string id;
+	} GetMetadataExportParams;
+
+/*
+Method MetadataExport
+
+	human readable identifier
+
+	number of samples in project
+
+	unique object identifier
+
+	sample object containing sample metadata, sample libraries, sample envPackage
+
+	hash of metadata by label
+
+*/
+
+	typedef structure {
+		string name;
+		int sampleNum;
+		string id;
+		list<mapping<string, string>> samples;
+		mapping<string, string> data;
+	} MetadataExport;
+
+/*
+A set of parameters the PostMetadataImport method. This is a mapping of key value pairs, defined as follows:
+
+string metagenome
+
+	unique metagenome ID
+
+string node_id
+
+	shock node ID of metadata spreadsheet
+
+string upload
+
+	xlsx or xls format spreadsheet with metadata
+
+*/
+	typedef structure {
+		string metagenome;
+		string node_id;
+		string upload;
+	} PostMetadataImportParams;
+
+/*
+Method MetadataImport
+
+	unique object identifier
+
+	ID of metagenome with metadata added
+
+	error message that may have occurred
+
+*/
+
+	typedef structure {
+		string project;
+		list<string> added;
+		list<string> errors;
+	} MetadataImport;
+
+/*
+A set of parameters the PostMetadataUpdate method. This is a mapping of key value pairs, defined as follows:
+
+string node_id
+
+	shock node ID of metadata spreadsheet
+
+string upload
+
+	xlsx or xls format spreadsheet with metadata
+
+string project
+
+	unique project identifier
+
+string metagenome
+
+	unique metagenome ID
+
+int map_by_id
+
+	option to map metadata from spreadsheet to metagenomes using ID, default is name
+
+*/
+	typedef structure {
+		string node_id;
+		string upload;
+		string project;
+		string metagenome;
+		int map_by_id;
+	} PostMetadataUpdateParams;
+
+/*
+Method MetadataUpdate
+
+	ID of metagenome with metadata added
+
+	unique object identifier
+
+	error message that may have occurred
+
+*/
+
+	typedef structure {
+		list<string> added;
+		string project;
+		list<string> errors;
+	} MetadataUpdate;
+
+/*
+A set of parameters the PostMetadataValidate method. This is a mapping of key value pairs, defined as follows:
+
+string node_id
+
+	shock node ID of metadata spreadsheet
+
+string upload
+
+	xlsx or xls format spreadsheet with metadata
+
+*/
+	typedef structure {
+		string node_id;
+		string upload;
+	} PostMetadataValidateParams;
+
+/*
+Method MetadataValidate
+
+	if not valid, reason why
+
+	the metadata sheet is valid
+
+	valid metadata object for project and its samples and libraries
+
+*/
+
+	typedef structure {
+		string message;
+		int is_valid;
+		mapping<string, string> metadata;
+	} MetadataValidate;
+
+/*
+A set of parameters the GetMetadataValidate method. This is a mapping of key value pairs, defined as follows:
+
+string label
+
+	metadata label
+
+string group
+
+This parameter value can be chosen from the following (the first being default):
+
+	mixs - label is part of MIxS (minimal) metadata
+	mims - label is part of MIMS (metagenome) metadata
+	migs - label is part of MIGS (genome) metadata
+
+string value
+
+	metadata value
+
+string category
+
+This parameter value can be chosen from the following (the first being default):
+
+	project - label belongs to project metadata
+	sample - label belongs to sample metadata
+	library - label belongs to library metadata
+	env_package - label belongs to env_package metadata
+
+string version
+
+	version of CV ontology to use
+
+*/
+	typedef structure {
+		string label;
+		string group;
+		string value;
+		string category;
+		string version;
+	} GetMetadataValidateParams;
+
+/*
+Method MetadataValidate
+
+	if not valid, reason why
+
+	the inputed value is valid for the given category and label
+
+*/
+
+	typedef structure {
+		string message;
+		int is_valid;
+	} MetadataValidate;
+
+/*
+A set of parameters the GetMetagenomeQuery method. This is a mapping of key value pairs, defined as follows:
+
+string direction
+
+This parameter value can be chosen from the following (the first being default):
+
+	asc - sort by ascending order
+	desc - sort by descending order
+
+int offset
+
+	zero based index of the first data object to be returned
+
+string organism
+
+	search parameter: query string for organism
+
+string order
+
+	metagenome object field to sort by (default is id)
+
+string function
+
+	search parameter: query string for function
+
+int limit
+
+	maximum number of items requested
+
+string metadata
+
+	search parameter: query string for any metadata field
+
+string md5
+
+	search parameter: md5 checksum of feature sequence
+
+string status
+
+This parameter value can be chosen from the following (the first being default):
+
+	both - returns all data (public and private) user has access to view
+	public - returns all public data
+	private - returns private data user has access to view
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+	mixs - returns all GSC MIxS metadata
+	metadata - returns minimal with metadata
+	stats - returns minimal with statistics
+	full - returns all metadata and statistics
+
+string match
+
+This parameter value can be chosen from the following (the first being default):
+
+	all - return metagenomes that match all search parameters
+	any - return metagenomes that match any search parameters
+
+*/
+	typedef structure {
+		string direction;
+		int offset;
+		string organism;
+		string order;
+		string function;
+		int limit;
+		string metadata;
+		string md5;
+		string status;
+		string verbosity;
+		string match;
+	} GetMetagenomeQueryParams;
+
+/*
+Method MetagenomeQuery
+
+	total number of available data items
+
+	name of the attribute the returned data is ordered by
+
+	zero based index of the first returned data item
+
+	resource location of this object instance
+
+	link to the next set or null if this is the last set
+
+	maximum number of data items returned, default is 10
+
+	metagenome object
+
+	link to the previous set or null if this is the first set
+
+	version of the object
+
+*/
+
+	typedef structure {
+		int total_count;
+		string order;
+		int offset;
+		string url;
+		string prev;
+		int limit;
+		list<mapping<string, string>> data;
+		string next;
+		int version;
+	} MetagenomeQuery;
+
+/*
+A set of parameters the GetMetagenomeInstance method. This is a mapping of key value pairs, defined as follows:
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+	metadata - returns minimal with metadata
+	stats - returns minimal with statistics
+	full - returns all metadata and statistics
+
+string id
+
+	unique object identifier
+
+*/
+	typedef structure {
+		string verbosity;
+		string id;
+	} GetMetagenomeInstanceParams;
+
+/*
+Method MetagenomeInstance
+
+	version of the metagenome
+
+	reference to the related sample object
+
+	key value pairs describing pipeline parameters
+
+	reference to the project object
+
+	sequencing type
+
+	name of metagenome
+
+	key value pairs describing all metadata
+
+	unique metagenome identifier
+
+	ARRAY(0x2208378)
+
+	reference to the related library object
+
+	resource location of this object instance
+
+	key value pairs describing statistics
+
+	key value pairs describing MIxS metadata
+
+	time the metagenome was first created
+
+*/
+
+	typedef structure {
+		int version;
+		string sample;
+		mapping<string, string> pipeline_parameters;
+		string project;
+		string sequence_type;
+		string name;
+		mapping<string, string> metadata;
+		string id;
+		string status;
+		string library;
+		string url;
+		mapping<string, string> statistics;
+		mapping<string, string> mixs;
+		string created;
+	} MetagenomeInstance;
+
+/*
+A set of parameters the GetProfileInstance method. This is a mapping of key value pairs, defined as follows:
+
+string hit_type
+
+This parameter value can be chosen from the following (the first being default):
+
+	all - returns results based on all organisms that map to top hit per read-feature
+	single - returns results based on a single organism for top hit per read-feature
+	lca - returns results based on the Least Common Ancestor for all organisms (M5NR+M5RNA only) that map to hits from a read-feature
+
+string type
+
+This parameter value can be chosen from the following (the first being default):
+
+	organism - return organism data
+	function - return functional data
+	feature - return feature data
+
+string id
+
+	unique object identifier
+
+int identity
+
+	percent value for minimum % identity cutoff: default is 60
+
+int evalue
+
+	negative exponent value for maximum e-value cutoff: default is 5
+
+int length
+
+	value for minimum alignment length cutoff: default is 15
+
+string source
+
+This parameter value can be chosen from the following (the first being default):
+
+	M5NR - comprehensive protein database
+	RefSeq - protein database, type organism, function, feature
+	GenBank - protein database, type organism, function, feature
+	IMG - protein database, type organism, function, feature
+	SEED - protein database, type organism, function, feature
+	TrEMBL - protein database, type organism, function, feature
+	SwissProt - protein database, type organism, function, feature
+	PATRIC - protein database, type organism, function, feature
+	KEGG - protein database, type organism, function, feature
+	M5RNA - comprehensive RNA database
+	RDP - RNA database, type organism, function, feature
+	Greengenes - RNA database, type organism, function, feature
+	LSU - RNA database, type organism, function, feature
+	SSU - RNA database, type organism, function, feature
+	Subsystems - ontology database, type ontology only
+	NOG - ontology database, type ontology only
+	COG - ontology database, type ontology only
+	KO - ontology database, type ontology only
+
+int nocutoff
+
+	if true, get data using no cutoffs
+
+*/
+	typedef structure {
+		string hit_type;
+		string type;
+		string id;
+		int identity;
+		int evalue;
+		int length;
+		string source;
+		int nocutoff;
+	} GetProfileInstanceParams;
+
+/*
+Method ProfileInstance
+
+	columns object
+
+	format specification name
+
+	rows object
+
+	identifier of the data generator
+
+	data type of the elements in the return matrix
+
+	time the output data was generated
+
+	unique object identifier
+
+	the matrix values
+
+	url to the format specification
+
+	type of the data in the return table (taxon, function or gene)
+
+	type of the data encoding matrix (dense or sparse)
+
+	list of the dimension sizes of the return matrix
+
+*/
+
+	typedef structure {
+		list<mapping<string, string>> columns;
+		string format;
+		list<mapping<string, string>> rows;
+		string generated_by;
+		string matrix_element_type;
+		string date;
+		string id;
+		list<list<float>> data;
+		string format_url;
+		string type;
+		string matrix_type;
+		list<int> shape;
+	} ProfileInstance;
+
+/*
+A set of parameters the GetProjectQuery method. This is a mapping of key value pairs, defined as follows:
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+	verbose - returns all metadata
+	full - returns all metadata and references
+
+string order
+
+This parameter value can be chosen from the following (the first being default):
+
+	id - return data objects ordered by id
+	name - return data objects ordered by name
+
+int limit
+
+	maximum number of items requested
+
+int offset
+
+	zero based index of the first data object to be returned
+
+*/
+	typedef structure {
+		string verbosity;
+		string order;
+		int limit;
+		int offset;
+	} GetProjectQueryParams;
+
+/*
+Method ProjectQuery
+
+	list of the project objects
+
+	maximum number of data items returned, default is 10
+
+	total number of available data items
+
+	name of the attribute the returned data is ordered by
+
+	link to the previous set or null if this is the first set
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+*/
+
+	typedef structure {
+		list<mapping<string, string>> data;
+		int limit;
+		int total_count;
+		string order;
+		string next;
+		int offset;
+		string prev;
+	} ProjectQuery;
+
+/*
+A set of parameters the GetProjectInstance method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	unique object identifier
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+	verbose - returns all metadata
+	full - returns all metadata and references
+
+*/
+	typedef structure {
+		string id;
+		string verbosity;
+	} GetProjectInstanceParams;
+
+/*
+Method ProjectInstance
+
+	key value pairs describing metadata
+
+	unique object identifier
+
+	ARRAY(0x22156a0)
+
+	human readable identifier
+
+	version of the object
+
+	time the object was first created
+
+	a short, comprehensive description of the project
+
+	the first and last name of the principal investigator of the project
+
+	the official name of the source of funding of this project
+
+	resource location of this object instance
+
+*/
+
+	typedef structure {
+		mapping<string, string> metadata;
+		string id;
+		string status;
+		string name;
+		int version;
+		string created;
+		string description;
+		string pi;
+		string funding_source;
+		string url;
+	} ProjectInstance;
+
+/*
+A set of parameters the GetSampleQuery method. This is a mapping of key value pairs, defined as follows:
+
+int offset
+
+	zero based index of the first data object to be returned
+
+string order
+
+This parameter value can be chosen from the following (the first being default):
+
+	id - return data objects ordered by id
+	name - return data objects ordered by name
+
+int limit
+
+	maximum number of items requested
+
+*/
+	typedef structure {
+		int offset;
+		string order;
+		int limit;
+	} GetSampleQueryParams;
+
+/*
+Method SampleQuery
+
+	link to the previous set or null if this is the first set
+
+	zero based index of the first returned data item
+
+	link to the next set or null if this is the last set
+
+	list of sample objects
+
+	total number of available data items
+
+	maximum number of data items returned, default is 10
+
+	name of the attribute the returned data is ordered by
+
+*/
+
+	typedef structure {
+		string next;
+		int offset;
+		string prev;
+		list<mapping<string, string>> data;
+		int total_count;
+		int limit;
+		string order;
+	} SampleQuery;
+
+/*
+A set of parameters the GetSampleInstance method. This is a mapping of key value pairs, defined as follows:
+
+string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+	minimal - returns only minimal information
+	verbose - returns all metadata
+	full - returns all metadata and references
+
+string id
+
+	unique object identifier
+
+*/
+	typedef structure {
+		string verbosity;
+		string id;
+	} GetSampleInstanceParams;
+
+/*
+Method SampleInstance
+
+	reference to the project of this sample
+
+	version of the object
+
+	key value pairs describing metadata
+
+	unique object identifier
+
+	human readable identifier
+
+	environmental package object
+
+	resource location of this object instance
+
+	time the object was first created
+
+*/
+
+	typedef structure {
+		string project;
+		int version;
+		mapping<string, string> metadata;
+		string id;
+		string name;
+		mapping<string, string> env_package;
+		string url;
+		string created;
+	} SampleInstance;
+
+/*
+A set of parameters the GetServerInstance method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	unique server ID
+
+*/
+	typedef structure {
+		string id;
+	} GetServerInstanceParams;
+
+/*
+Method ServerInstance
+
+	total number of public metagenomes
+
+	version number of the server
+
+	status of the server
+
+	unique identifier of this server
+
+	informational text, i.e. downtime warnings
+
+	resource location of this object instance
+
+	total number of basepairs
+
+	total number of sequences
+
+	total number of metagenomes
+
+*/
+
+	typedef structure {
+		int public_metagenomes;
+		string version;
+		string status;
+		string id;
+		string info;
+		string url;
+		int basepairs;
+		int sequences;
+		int metagenomes;
+	} ServerInstance;
+
+/*
+A set of parameters the GetSubmissionList method. This is a mapping of key value pairs, defined as follows:
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+*/
+	typedef structure {
+		string auth;
+	} GetSubmissionListParams;
+
+/*
+Method SubmissionList
+
+	user id
+
+	submission object
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string user;
+		list<mapping<string, string>> submissions;
+		string timestamp;
+	} SubmissionList;
+
+/*
+A set of parameters the GetSubmissionStatus method. This is a mapping of key value pairs, defined as follows:
+
+int full
+
+	if true show full document of running jobs, default is summary
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+string uuid
+
+	RFC 4122 UUID for submission
+
+*/
+	typedef structure {
+		int full;
+		string auth;
+		string uuid;
+	} GetSubmissionStatusParams;
+
+/*
+Method SubmissionStatus
+
+	timestamp for return of this query
+
+	RFC 4122 UUID for submission
+
+	user id
+
+	status message
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string id;
+		string user;
+		string status;
+	} SubmissionStatus;
+
+/*
+A set of parameters the DeleteSubmissionDelete method. This is a mapping of key value pairs, defined as follows:
+
+string uuid
+
+	RFC 4122 UUID for submission
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+int full
+
+	if true delete all files and metagenomes in mgrast for submission, default just data in inbox
+
+*/
+	typedef structure {
+		string uuid;
+		string auth;
+		int full;
+	} DeleteSubmissionDeleteParams;
+
+/*
+Method SubmissionDelete
+
+	timestamp for return of this query
+
+	user id
+
+	RFC 4122 UUID for submission
+
+	status message
+
+*/
+
+	typedef structure {
+		string timestamp;
+		string user;
+		string id;
+		string status;
+	} SubmissionDelete;
+
+/*
+A set of parameters the PostSubmissionSubmit method. This is a mapping of key value pairs, defined as follows:
+
+string priority
+
+This parameter value can be chosen from the following (the first being default):
+
+	never
+	Data will stay private (default)
+
+string pair_file_1
+
+	RFC 4122 UUID for pair 1 file
+
+int retain
+
+	If true retain non-overlapping sequences, default is false
+
+string multiplex_file
+
+	RFC 4122 UUID for file to demultiplex
+
+string mg_name
+
+	name of metagenome for pair-join
+
+string index_file
+
+	RFC 4122 UUID for index (barcode) file
+
+string barcode_file
+
+	RFC 4122 UUID for barcode mapping file
+
+string pair_file_2
+
+	RFC 4122 UUID for pair 2 file
+
+int dereplicate
+
+	if true run dereplication, default is true
+
+int min_qual
+
+	quality threshold for low-quality bases, default is 15
+
+int filter_ambig
+
+	if true run sequence ambiguous bp filtering, default is true
+
+string auth
+
+	unique string of text generated by MG-RAST for your account
+
+int debug
+
+	if true return workflow document instead of submitting
+
+list<string> seq_files
+
+	RFC 4122 UUID for sequence file
+
+int max_lqb
+
+	maximum number of low-quality bases per read, default is 5
+
+string screen_indexes
+
+This parameter value can be chosen from the following (the first being default):
+
+	h_sapiens
+	Homo sapiens (default)
+
+int max_ambig
+
+	maximum ambiguous bps to allow through per sequence, default is 5
+
+string project_id
+
+	unique MG-RAST project identifier
+
+int dynamic_trim
+
+	if true run qual score dynamic trimmer, default is true
+
+string project_name
+
+	unique MG-RAST project name
+
+float filter_ln_mult
+
+	sequence length filtering multiplier, default is 2.0
+
+int filter_ln
+
+	if true run sequence length filtering, default is true
+
+int bowtie
+
+	if true run bowtie screening, default is true
+
+string metadata_file
+
+	RFC 4122 UUID for metadata file
+
+int assembled
+
+	if true sequences are assembeled, default is false
+
+int rc_index
+
+	If true barcodes in index file are reverse compliment of mapping file, default is false
+
+*/
+	typedef structure {
+		string priority;
+		string pair_file_1;
+		int retain;
+		string multiplex_file;
+		string mg_name;
+		string index_file;
+		string barcode_file;
+		string pair_file_2;
+		int dereplicate;
+		int min_qual;
+		int filter_ambig;
+		string auth;
+		int debug;
+		list<string> seq_files;
+		int max_lqb;
+		string screen_indexes;
+		int max_ambig;
+		string project_id;
+		int dynamic_trim;
+		string project_name;
+		float filter_ln_mult;
+		int filter_ln;
+		int bowtie;
+		string metadata_file;
+		int assembled;
+		int rc_index;
+	} PostSubmissionSubmitParams;
+
+/*
+Method SubmissionSubmit
+
+	status message
+
+	user id
+
+	RFC 4122 UUID for submission
+
+	timestamp for return of this query
+
+*/
+
+	typedef structure {
+		string status;
+		string user;
+		string id;
+		string timestamp;
+	} SubmissionSubmit;
+
+/*
+A set of parameters the GetValidationTemplate method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	SHOCK template id
+
+*/
+	typedef structure {
+		string id;
+	} GetValidationTemplateParams;
+
+/*
+Method ValidationTemplate
+
+	boolean indicating whether the examined template is valid or not
+
+*/
+
+	typedef structure {
+		int valid;
+	} ValidationTemplate;
+
+/*
+A set of parameters the GetValidationData method. This is a mapping of key value pairs, defined as follows:
+
+string id
+
+	SHOCK data id
+
+string template
+
+	SHOCK template id, default is MG-RAST metagenome metadata template
+
+*/
+	typedef structure {
+		string id;
+		string template;
+	} GetValidationDataParams;
+
+/*
+Method ValidationData
+
+	boolean indicating whether the examined template is valid or not
+
+*/
+
+	typedef structure {
+		int valid;
+	} ValidationData;
+
+
+/* All annotations of a metagenome for a specific annotation type and source
+tab delimited annotated sequence stream
+*/
+	funcdef get_annotation_sequence(GetAnnotationSequenceParams) returns (AnnotationSequence);
+
+
+/* All annotations of a metagenome for a specific annotation type and source
+tab delimited blast m8 with annotation
+*/
+	funcdef get_annotation_similarity(GetAnnotationSimilarityParams) returns (AnnotationSimilarity);
+
+
+/* Calculate various statistics for given input data.
+Calculate alpha diversity value for given ID and taxon level.
+*/
+	funcdef get_compute_alphadiversity(GetComputeAlphadiversityParams) returns (ComputeAlphadiversity);
+
+
+/* Calculate various statistics for given input data.
+Calculate normalized values for given input data.
+*/
+	funcdef post_compute_normalize(PostComputeNormalizeParams) returns (ComputeNormalize);
+
+
+/* Calculate various statistics for given input data.
+Calculate significance values for given input data.
+*/
+	funcdef post_compute_significance(PostComputeSignificanceParams) returns (ComputeSignificance);
+
+
+/* Calculate various statistics for given input data.
+Calculate a dendrogram for given input data.
+*/
+	funcdef post_compute_heatmap(PostComputeHeatmapParams) returns (ComputeHeatmap);
+
+
+/* Calculate various statistics for given input data.
+Calculate a PCoA for given input data.
+*/
+	funcdef post_compute_pcoa(PostComputePcoaParams) returns (ComputePcoa);
+
+
+/* An analysis file from the processing of a metagenome from a specific stage in its analysis
+Returns a single sequence file.
+*/
+	funcdef get_download_instance(GetDownloadInstanceParams) returns (DownloadInstance);
+
+
+/* An analysis file from the processing of a metagenome from a specific stage in its analysis
+Returns a list of sets of sequence files for the given id.
+*/
+	funcdef get_download_setlist(GetDownloadSetlistParams) returns (DownloadSetlist);
+
+
+/* Status of services
+Returns the status of a service.
+*/
+	funcdef get_heartbeat_instance(GetHeartbeatInstanceParams) returns (HeartbeatInstance);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+lists the contents of the user inbox
+*/
+	funcdef get_inbox_view(GetInboxViewParams) returns (InboxView);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+view status of AWE inbox actions
+*/
+	funcdef get_inbox_view_pending(GetInboxView_pendingParams) returns (InboxView_pending);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+receives user inbox data upload
+*/
+	funcdef post_inbox_upload(PostInboxUploadParams) returns (InboxUpload);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+delete indicated file from inbox
+*/
+	funcdef delete_inbox_delete(DeleteInboxDeleteParams) returns (InboxDelete);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+get basic file info - returns results and updates shock node
+*/
+	funcdef get_inbox_file_info(GetInboxFile_infoParams) returns (InboxFile_info);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+validate metadata spreadsheet in inbox
+*/
+	funcdef get_inbox_validate_metadata(GetInboxValidate_metadataParams) returns (InboxValidate_metadata);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+runs sequence stats on file in user inbox - submits AWE job
+*/
+	funcdef get_inbox_seq_stats(GetInboxSeq_statsParams) returns (InboxSeq_stats);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+rename indicated file from inbox
+*/
+	funcdef post_inbox_rename(PostInboxRenameParams) returns (InboxRename);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+create fastq file from sff file - submits AWE job
+*/
+	funcdef post_inbox_sff_to_fastq(PostInboxSff_to_fastqParams) returns (InboxSff_to_fastq);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+demultiplex seq file with barcode file - submits AWE job
+*/
+	funcdef post_inbox_demultiplex(PostInboxDemultiplexParams) returns (InboxDemultiplex);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+merge overlapping paired-end fastq files - submits AWE job
+*/
+	funcdef post_inbox_pair_join(PostInboxPair_joinParams) returns (InboxPair_join);
+
+
+/* inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+merge overlapping paired-end fastq files and demultiplex based on index file - submits AWE job
+*/
+	funcdef post_inbox_pair_join_demultiplex(PostInboxPair_join_demultiplexParams) returns (InboxPair_join_demultiplex);
+
+
+/* A library of metagenomic samples from some environment
+Returns a set of data matching the query criteria.
+*/
+	funcdef get_library_query(GetLibraryQueryParams) returns (LibraryQuery);
+
+
+/* A library of metagenomic samples from some environment
+Returns a single data object.
+*/
+	funcdef get_library_instance(GetLibraryInstanceParams) returns (LibraryInstance);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return functional hierarchy
+*/
+	funcdef get_m5nr_ontology(GetM5nrOntologyParams) returns (M5nrOntology);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return organism hierarchy
+*/
+	funcdef get_m5nr_taxonomy(GetM5nrTaxonomyParams) returns (M5nrTaxonomy);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return all sources in M5NR
+*/
+	funcdef get_m5nr_sources(GetM5nrSourcesParams) returns (M5nrSources);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotation of given source protein ID
+*/
+	funcdef get_m5nr_accession(GetM5nrAccessionParams) returns (M5nrAccession);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for alias IDs containing the given text
+*/
+	funcdef get_m5nr_alias(GetM5nrAliasParams) returns (M5nrAlias);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotation(s) or sequence of given md5sum (M5NR ID)
+*/
+	funcdef get_m5nr_md5(GetM5nrMd5Params) returns (M5nrMd5);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for function names containing the given text
+*/
+	funcdef get_m5nr_function(GetM5nrFunctionParams) returns (M5nrFunction);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for organism names containing the given text
+*/
+	funcdef get_m5nr_organism(GetM5nrOrganismParams) returns (M5nrOrganism);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotation(s) for md5sum (M5NR ID) of given sequence
+*/
+	funcdef get_m5nr_sequence(GetM5nrSequenceParams) returns (M5nrSequence);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations of given source protein IDs
+*/
+	funcdef post_m5nr_accession(PostM5nrAccessionParams) returns (M5nrAccession);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for aliases containing the given texts
+*/
+	funcdef post_m5nr_alias(PostM5nrAliasParams) returns (M5nrAlias);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations or sequences of given md5sums (M5NR ID)
+*/
+	funcdef post_m5nr_md5(PostM5nrMd5Params) returns (M5nrMd5);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for function names containing the given texts
+*/
+	funcdef post_m5nr_function(PostM5nrFunctionParams) returns (M5nrFunction);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for organism names containing the given texts
+*/
+	funcdef post_m5nr_organism(PostM5nrOrganismParams) returns (M5nrOrganism);
+
+
+/* M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for md5s (M5NR ID) of given sequences
+*/
+	funcdef post_m5nr_sequence(PostM5nrSequenceParams) returns (M5nrSequence);
+
+
+/* A profile in biom format that contains abundance counts
+Returns a BIOM object.
+*/
+	funcdef get_matrix_organism(GetMatrixOrganismParams) returns (MatrixOrganism);
+
+
+/* A profile in biom format that contains abundance counts
+Returns a BIOM object.
+*/
+	funcdef get_matrix_function(GetMatrixFunctionParams) returns (MatrixFunction);
+
+
+/* A profile in biom format that contains abundance counts
+Returns a BIOM object.
+*/
+	funcdef get_matrix_feature(GetMatrixFeatureParams) returns (MatrixFeature);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns static template for metadata object relationships and types
+*/
+	funcdef get_metadata_template() returns (MetadataTemplate);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns static controlled vocabularies used in metadata. By default returns all CVs at latest version. If label and version options used, returns those specific values.
+*/
+	funcdef get_metadata_cv(GetMetadataCvParams) returns (MetadataCv);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns static ontology used in metadata for the given name and version.
+*/
+	funcdef get_metadata_ontology(GetMetadataOntologyParams) returns (MetadataOntology);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns all versions available for given ontology name.
+*/
+	funcdef get_metadata_version(GetMetadataVersionParams) returns (MetadataVersion);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns list of unique metadata values for given label
+*/
+	funcdef get_metadata_view(GetMetadataViewParams) returns (MetadataView);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns full nested metadata for a project in same format as template, or metadata for a single metagenome.
+*/
+	funcdef get_metadata_export(GetMetadataExportParams) returns (MetadataExport);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Create project with given metadata spreadsheet and metagenome IDs, either upload or shock node
+*/
+	funcdef post_metadata_import(PostMetadataImportParams) returns (MetadataImport);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Update project with given metadata spreadsheet and metagenome IDs, either upload or shock node
+*/
+	funcdef post_metadata_update(PostMetadataUpdateParams) returns (MetadataUpdate);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Validate given metadata spreadsheet, either upload or shock node
+*/
+	funcdef post_metadata_validate(PostMetadataValidateParams) returns (MetadataValidate);
+
+
+/* Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Validate given metadata value
+*/
+	funcdef get_metadata_validate(GetMetadataValidateParams) returns (MetadataValidate);
+
+
+/* A metagenome is an analyzed set sequences from a sample of some environment
+Returns a set of data matching the query criteria.
+*/
+	funcdef get_metagenome_query(GetMetagenomeQueryParams) returns (MetagenomeQuery);
+
+
+/* A metagenome is an analyzed set sequences from a sample of some environment
+Returns a single data object.
+*/
+	funcdef get_metagenome_instance(GetMetagenomeInstanceParams) returns (MetagenomeInstance);
+
+
+/* A profile in biom format that contains abundance and similarity values
+Returns a single data object in BIOM format
+*/
+	funcdef get_profile_instance(GetProfileInstanceParams) returns (ProfileInstance);
+
+
+/* A project is a composition of samples, libraries and metagenomes being analyzed in a global context.
+Returns a set of data matching the query criteria.
+*/
+	funcdef get_project_query(GetProjectQueryParams) returns (ProjectQuery);
+
+
+/* A project is a composition of samples, libraries and metagenomes being analyzed in a global context.
+Returns a single data object.
+*/
+	funcdef get_project_instance(GetProjectInstanceParams) returns (ProjectInstance);
+
+
+/* A metagenomic sample from some environment.
+Returns a set of data matching the query criteria.
+*/
+	funcdef get_sample_query(GetSampleQueryParams) returns (SampleQuery);
+
+
+/* A metagenomic sample from some environment.
+Returns a single data object.
+*/
+	funcdef get_sample_instance(GetSampleInstanceParams) returns (SampleInstance);
+
+
+/* The server resource returns information about a server.
+Returns a single user object.
+*/
+	funcdef get_server_instance(GetServerInstanceParams) returns (ServerInstance);
+
+
+/* submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+list all submissions by user
+*/
+	funcdef get_submission_list(GetSubmissionListParams) returns (SubmissionList);
+
+
+/* submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+get status of submission from ID
+*/
+	funcdef get_submission_status(GetSubmissionStatusParams) returns (SubmissionStatus);
+
+
+/* submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+delete all files and running processes for given submission ID
+*/
+	funcdef delete_submission_delete(DeleteSubmissionDeleteParams) returns (SubmissionDelete);
+
+
+/* submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+start new submission
+*/
+	funcdef post_submission_submit(PostSubmissionSubmitParams) returns (SubmissionSubmit);
+
+
+/* validates templates for correct structure and data to fit a valid template
+Checks if the referenced JSON structure is a valid template
+*/
+	funcdef get_validation_template(GetValidationTemplateParams) returns (ValidationTemplate);
+
+
+/* validates templates for correct structure and data to fit a valid template
+Returns a single data object.
+*/
+	funcdef get_validation_data(GetValidationDataParams) returns (ValidationData);
+};

@@ -94,9 +94,13 @@ build-service:
 	chmod +x api/site/CGI/api.cgi
 	@echo "done building API"
 
-build-libs:
+update-specs:
 	api2js -url $(CLIENT_URL) -outfile docs/CommunitiesAPI.json
 	definition2typedef -json docs/CommunitiesAPI.json -typedef docs/CommunitiesAPI.typedef -service CommunitiesAPI
+	sed -i "s/in\-progress/in_progress/" docs/CommunitiesAPI.typedef
+	api2html -url $(SERVICE_URL) -site_name "Communities API" -outfile docs/Communities_API.html
+
+build-libs:
 	compile_typespec --impl CommunitiesAPI --js CommunitiesAPI --py CommunitiesAPI docs/CommunitiesAPI.typedef lib
 	@echo "done building typespec libs"
 
@@ -121,7 +125,6 @@ update-tools:
 	cd tools; git pull origin master
 
 build-docs:
-	api2html -url $(CLIENT_URL) -site_name "Communities API" -outfile docs/communities-api.html
 	pod2html --infile=lib/CommunitiesAPIClient.pm --outfile=docs/CommunitiesAPI.html --title="Communities API Client"
 
 deploy-docs: build-docs

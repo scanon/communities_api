@@ -1,0 +1,4434 @@
+=pod
+
+=head1 module CommunitiesAPI
+
+<p>The MG-RAST API covers most of the functionality available through the MG-RAST website, with access to annotations, analyses, metadata and access to the MG-RAST user inbox to view contents as well as upload files. All sequence data and data products from intermediate stages in the analysis pipeline are available for download. Other resources provide services not available through the website, e.g. the m5nr resource lets you query the m5nr database.</p><p>Each query to the API is represented as a URI beginning with "http://kbase.us/services/communities/" and has a defined structure to pass the requests and parameters to the API server.</p><p>The URI queries can be used from the command line, e.g. using curl, in a browser, or incorporated in a shell script or program.</p><p>Each URI has the form</p><pre>"http://kbase.us/services/communities/{version}/{resourcepath}?{querystring}"</pre><p>The {version} value (currently '1') explicitly directs the request to a specific version of the API, if it is omitted the latest API version will be used.</p><p>The resource path is constructed from the path parameters listed below to define a specific resource and the optional query string is used to filter the results obtained for the resource. For example:</p><pre>http://kbase.us/services/communities/1/annotation/sequence/mgm4447943.3?evalue=10&type=organism&source=SwissProt</pre><p>In this example the resource path "annotation/sequence/mgm4447943.3" defines a request for the annotated sequences for the MG-RAST job with ID 4447943.3.</p><p>The optional query string "evalue=10&type=organism&source=SwissProt" modifies the results by setting an evalue cutoff, annotation type and database source.</p><p>The API provides an authentication mechanism for access to private MG-RAST jobs and users' inbox. The 'auth_key' (or 'webkey') is a 25 character long string  (e.g. 'j6FNL61ekNarTgqupMma6eMx5') which is used by the API to identify an MG-RAST user account and determine access rights to metagenomes. Note that the auth_key is valid for a limited time after which queries using the key will be rejected. You can create a new auth_key or view the expiration date and time of an existing auth_key on the MG-RAST website. An account can have only one valid auth_key and creating a new key will invalidate an existing key.</p><p>All public data in MG-RAST is available without an auth_key. All API queries for private data which either do not have an auth_key or use an invalid or expired auth_key will get a "insufficient permissions to view this data" response.</p><p>The auth_key can be included in the query string like:</p><pre>
+http://kbase.us/services/communities/1/annotation/sequence/mgm4447943.3?evalue=10&type=organism&source=SwissProt&auth=j6FNL61ekNarTgqupMma6eMx5</pre><p>or in a request using curl like:</p><pre>curl -X GET -H "auth: j6FNL61ekNarTgqupMma6eMx5" "http://kbase.us/services/communities/1/annotation/sequence/mgm4447943.3?evalue=10&type=organism&source=SwissProt"</pre><p>Note that for the curl command the quotes are necessary for the query to be passed to the API correctly.</p><p>If an optional parameter passed through the query string has a list of values only the first will be used. When multiple values are required, e.g. for multiple md5 checksum values, they can be passed to the API like:</p><pre>curl -X POST -d '{"data":["000821a2e2f63df1a3873e4b280002a8","15bf1950bd9867099e72ea6516e3d602"]}' "http://kbase.us/services/communities/m5nr/md5"</pre><p>In some cases, the data requested is in the form of a list with a large number of entries. In these cases the limit and offset parameters can be used to step through the list, for example:</p><pre>http://kbase.us/services/communities/1/project?order=name&limit=20&offset=100</pre><p>will limit the number of entries returned to 20 with an offset of 100. If these parameters are not provided default values of limit=10 and offset=0 are used. The returned JSON structure will contain the 'next' and 'prev' (previous) URIs to simplify stepping through the list.</p><p>The data returned may be plain text, compressed gzipped files or a JSON structure.</p><p>Most API queries are 'synchronous' and results are returned immediately. Some queries may require a substantial time to compute results, in these cases you can select the asynchronous option by adding '&asynchronous=1' to the end of the query string. This query will then return a URL which will return the query results when they are ready.</p>
+
+=head2 GetAnnotationSequence
+
+=head3 Description
+
+All annotations of a metagenome for a specific annotation type and source
+tab delimited annotated sequence stream
+
+=head3 Parameters
+
+=over4
+
+=item * int evalue
+
+negative exponent value for maximum e-value cutoff: default is 5
+
+=item * int length
+
+value for minimum alignment length cutoff: default is 15
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+ Subsystems - ontology database, type ontology only
+ NOG - ontology database, type ontology only
+ COG - ontology database, type ontology only
+ KO - ontology database, type ontology only
+
+=item * string filter
+
+text string to filter annotations by: only return those that contain text
+
+=item * string type
+
+This parameter value can be chosen from the following (the first being default):
+
+ organism - return organism data
+ function - return function data
+ ontology - return ontology data
+ feature - return feature data
+ md5 - return md5sum data
+
+=item * string id
+
+unique metagenome identifier
+
+=item * int identity
+
+percent value for minimum % identity cutoff: default is 60
+
+=item * string filter_level
+
+hierarchal level to filter annotations by, for organism or ontology only
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * mapping<string, string> streaming_text
+
+tab delimited annotated sequence stream
+
+=head2 GetAnnotationSimilarity
+
+=head3 Description
+
+All annotations of a metagenome for a specific annotation type and source
+tab delimited blast m8 with annotation
+
+=head3 Parameters
+
+=over4
+
+=item * string filter
+
+text string to filter annotations by: only return those that contain text
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+ Subsystems - ontology database, type ontology only
+ NOG - ontology database, type ontology only
+ COG - ontology database, type ontology only
+ KO - ontology database, type ontology only
+
+=item * int length
+
+value for minimum alignment length cutoff: default is 15
+
+=item * int evalue
+
+negative exponent value for maximum e-value cutoff: default is 5
+
+=item * string filter_level
+
+hierarchal level to filter annotations by, for organism or ontology only
+
+=item * int identity
+
+percent value for minimum % identity cutoff: default is 60
+
+=item * string id
+
+unique metagenome identifier
+
+=item * string type
+
+This parameter value can be chosen from the following (the first being default):
+
+ organism - return organism data
+ function - return function data
+ ontology - return ontology data
+ feature - return feature data
+ md5 - return md5sum data
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * mapping<string, string> streaming_text
+
+tab delimited blast m8 with annotation
+
+=cut
+
+=head2 GetComputeAlphadiversity
+
+=head3 Description
+
+Calculate various statistics for given input data.
+Calculate alpha diversity value for given ID and taxon level.
+
+=head3 Parameters
+
+=over4
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+
+=item * string id
+
+unique object identifier
+
+=item * string level
+
+This parameter value can be chosen from the following (the first being default):
+
+ strain - bottom organism taxonomic level
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string id
+
+unique metagenome identifier
+
+=item * float data
+
+alpha diversity value
+
+=item * string url
+
+resource location of this object instance
+
+=head2 PostComputeNormalize
+
+=head3 Description
+
+Calculate various statistics for given input data.
+Calculate normalized values for given input data.
+
+=head3 Parameters
+
+=over4
+
+=item * string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+ DESeq_blind - DESeq_blind normalization method
+ standardize - standardize normalization method
+ quantile - quantile normalization method
+ DESeq_per_condition - DESeq_per_condition normalization method
+ DESeq_pooled - DESeq_pooled normalization method
+ DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+=item * list<list<int>> data
+
+raw value
+
+=item * list<string> columns
+
+column id
+
+=item * list<string> rows
+
+row id
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<string> rows
+
+row id
+
+=item * list<string> columns
+
+column id
+
+=item * list<list<float>> data
+
+normalized value
+
+=head2 PostComputeSignificance
+
+=head3 Description
+
+Calculate various statistics for given input data.
+Calculate significance values for given input data.
+
+=head3 Parameters
+
+=over4
+
+=item * list<string> rows
+
+row id
+
+=item * list<string> groups
+
+group name
+
+=item * int raw
+
+option to use raw data (not normalize)
+
+=item * list<list<int>> data
+
+raw value
+
+=item * string test
+
+This parameter value can be chosen from the following (the first being default):
+
+ Kruskal-Wallis - Kruskal-Wallis significance testing method
+ t-test-paired - t-test-paired significance testing method
+ Wilcoxon-paired - Wilcoxon-paired significance testing method
+ t-test-unpaired - t-test-unpaired significance testing method
+ Mann-Whitney-unpaired-Wilcoxon - Mann-Whitney-unpaired-Wilcoxon significance testing method
+ ANOVA-one-way - ANOVA-one-way significance testing method
+
+=item * list<string> columns
+
+column id
+
+=item * string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+ DESeq_blind - DESeq_blind normalization method
+ standardize - standardize normalization method
+ quantile - quantile normalization method
+ DESeq_per_condition - DESeq_per_condition normalization method
+ DESeq_pooled - DESeq_pooled normalization method
+ DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<list<float>> data
+
+significance value
+
+=item * list<string> columns
+
+column name
+
+=item * list<string> rows
+
+row name
+
+=head2 PostComputeHeatmap
+
+=head3 Description
+
+Calculate various statistics for given input data.
+Calculate a dendrogram for given input data.
+
+=head3 Parameters
+
+=over4
+
+=item * string distance
+
+This parameter value can be chosen from the following (the first being default):
+
+ bray-curtis - bray-curtis distance method
+ euclidean - euclidean distance method
+ maximum - maximum distance method
+ manhattan - manhattan distance method
+ canberra - canberra distance method
+ minkowski - minkowski distance method
+ difference - difference distance method
+
+=item * list<string> rows
+
+row id
+
+=item * int raw
+
+option to use raw data (not normalize)
+
+=item * list<list<float>> data
+
+raw or normalized value
+
+=item * list<string> columns
+
+column id
+
+=item * string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+ DESeq_blind - DESeq_blind normalization method
+ standardize - standardize normalization method
+ quantile - quantile normalization method
+ DESeq_per_condition - DESeq_per_condition normalization method
+ DESeq_pooled - DESeq_pooled normalization method
+ DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+=item * string cluster
+
+This parameter value can be chosen from the following (the first being default):
+
+ ward - ward cluster method
+ single - single cluster method
+ complete - complete cluster method
+ mcquitty - mcquitty cluster method
+ median - median cluster method
+ centroid - centroid cluster method
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<string> columns
+
+column id
+
+=item * list<list<float>> data
+
+normalized value
+
+=item * mapping<string, string> rowdend
+
+dendrogram object for rows
+
+=item * list<string> rows
+
+row id
+
+=item * mapping<string, string> coldend
+
+dendrogram object for columns
+
+=item * list<float> rowindex
+
+row id index
+
+=item * list<float> colindex
+
+column id index
+
+=head2 PostComputePcoa
+
+=head3 Description
+
+Calculate various statistics for given input data.
+Calculate a PCoA for given input data.
+
+=head3 Parameters
+
+=over4
+
+=item * string norm
+
+This parameter value can be chosen from the following (the first being default):
+
+ DESeq_blind - DESeq_blind normalization method
+ standardize - standardize normalization method
+ quantile - quantile normalization method
+ DESeq_per_condition - DESeq_per_condition normalization method
+ DESeq_pooled - DESeq_pooled normalization method
+ DESeq_pooled_CR - DESeq_pooled_CR normalization method
+
+=item * list<list<float>> data
+
+raw or normalized value
+
+=item * list<string> columns
+
+column id
+
+=item * list<string> rows
+
+row id
+
+=item * string distance
+
+This parameter value can be chosen from the following (the first being default):
+
+ bray-curtis - bray-curtis distance method
+ euclidean - euclidean distance method
+ maximum - maximum distance method
+ manhattan - manhattan distance method
+ canberra - canberra distance method
+ minkowski - minkowski distance method
+ difference - difference distance method
+
+=item * int raw
+
+option to use raw data (not normalize)
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<float> pco
+
+average principal component value
+
+=item * list<mapping<string, string>> data
+
+pcoa object
+
+=cut
+
+=head2 GetDownloadInstance
+
+=head3 Description
+
+An analysis file from the processing of a metagenome from a specific stage in its analysis
+Returns a single sequence file.
+
+=head3 Parameters
+
+=over4
+
+=item * int link
+
+if true return one time link for download and not file stream
+
+=item * string file
+
+file name or identifier
+
+=item * string id
+
+unique metagenome identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string data
+
+requested analysis file
+
+=head2 GetDownloadSetlist
+
+=head3 Description
+
+An analysis file from the processing of a metagenome from a specific stage in its analysis
+Returns a list of sets of sequence files for the given id.
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+unique metagenome identifier
+
+=item * string stage
+
+stage name or identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string file_id
+
+unique identifier of file in stage
+
+=item * string id
+
+unique metagenome identifier
+
+=item * string file_name
+
+name of the analysis file
+
+=item * string url
+
+url for retrieving this analysis file
+
+=item * string stage_name
+
+name of the stage in processing of this file
+
+=item * string stage_type
+
+type of the analysis file within a stage, i.e. passed or removed for quality control steps
+
+=item * string stage_id
+
+three digit numerical identifier of the stage
+
+=cut
+
+=head2 GetHeartbeatInstance
+
+=head3 Description
+
+Status of services
+Returns the status of a service.
+
+=head3 Parameters
+
+=over4
+
+=item * string service
+
+This parameter value can be chosen from the following (the first being default):
+
+ FTP - file server
+ website - MG-RAST website
+ SHOCK - object storage
+ SHOCKDB - object storage mongodb
+ AWE - worker engine
+ AWEDB - worker engine mongodb
+ M5NR - non-redundant sequence database
+ solr - search engine
+ postgres - analysis database
+ mySQL - job database
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int status
+
+service is up or not
+
+=item * string service
+
+cv
+
+=cut
+
+=head2 GetInboxView
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+lists the contents of the user inbox
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string uuid
+
+RFC 4122 UUID for file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string url
+
+resource location of this object instance
+
+=item * list<mapping<string, string>> files
+
+list of file objects
+
+=item * string user
+
+user login
+
+=item * string id
+
+user id
+
+=head2 GetInboxView_pending
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+view status of AWE inbox actions
+
+=head3 Parameters
+
+=over4
+
+=item * int pending
+
+If true show the given state
+
+=item * int completed
+
+If true show the given state
+
+=item * int suspend
+
+If true show the given state
+
+=item * int deleted
+
+If true show the given state
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * int in-progress
+
+If true show the given state
+
+=item * int queued
+
+If true show the given state
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string user
+
+user login
+
+=head2 PostInboxUpload
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+receives user inbox data upload
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string upload
+
+file to upload to inbox
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string status
+
+status message
+
+=item * string id
+
+user id
+
+=item * string user
+
+user login
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=head2 DeleteInboxDelete
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+delete indicated file from inbox
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string uuid
+
+RFC 4122 UUID for file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string user
+
+user login
+
+=item * string status
+
+status message
+
+=item * string id
+
+user id
+
+=head2 GetInboxFile_info
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+get basic file info - returns results and updates shock node
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string uuid
+
+RFC 4122 UUID for file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string user
+
+user login
+
+=item * mapping<string, string> stats_info
+
+key value pairs describing file info
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=head2 GetInboxValidate_metadata
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+validate metadata spreadsheet in inbox
+
+=head3 Parameters
+
+=over4
+
+=item * string uuid
+
+RFC 4122 UUID for file
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string user
+
+user login
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=head2 GetInboxSeq_stats
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+runs sequence stats on file in user inbox - submits AWE job
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string uuid
+
+RFC 4122 UUID for sequence file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string awe_id
+
+url/id of awe job
+
+=item * string status
+
+status message
+
+=item * string id
+
+user id
+
+=item * string user
+
+user login
+
+=head2 PostInboxRename
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+rename indicated file from inbox
+
+=head3 Parameters
+
+=over4
+
+=item * string name
+
+new name for file
+
+=item * string file
+
+RFC 4122 UUID for file
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string uuid
+
+RFC 4122 UUID for file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string user
+
+user login
+
+=head2 PostInboxSff_to_fastq
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+create fastq file from sff file - submits AWE job
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string sff_file
+
+RFC 4122 UUID for sff file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string awe_id
+
+url/id of awe job
+
+=item * string user
+
+user login
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=head2 PostInboxDemultiplex
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+demultiplex seq file with barcode file - submits AWE job
+
+=head3 Parameters
+
+=over4
+
+=item * string index_file
+
+RFC 4122 UUID for index file (optional)
+
+=item * string barcode_file
+
+RFC 4122 UUID for barcode mapping file
+
+=item * int rc_index
+
+If true barcodes in index file are reverse compliment of mapping file, default is false
+
+=item * string seq_file
+
+RFC 4122 UUID for sequence file
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string awe_id
+
+url/id of awe job
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string user
+
+user login
+
+=head2 PostInboxPair_join
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+merge overlapping paired-end fastq files - submits AWE job
+
+=head3 Parameters
+
+=over4
+
+=item * int retain
+
+If true retain non-overlapping sequences, default is false
+
+=item * string output
+
+prefix for output file, default is a random uuid
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string pair_file_1
+
+RFC 4122 UUID for pair 1 file
+
+=item * string pair_file_2
+
+RFC 4122 UUID for pair 2 file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string id
+
+user id
+
+=item * string status
+
+status message
+
+=item * string user
+
+user login
+
+=item * string awe_id
+
+url/id of awe job
+
+=head2 PostInboxPair_join_demultiplex
+
+=head3 Description
+
+inbox receives user inbox data upload, requires authentication, see http://blog.metagenomics.anl.gov/mg-rast-v3-2-faq/#api_submission for details
+merge overlapping paired-end fastq files and demultiplex based on index file - submits AWE job
+
+=head3 Parameters
+
+=over4
+
+=item * string pair_file_1
+
+RFC 4122 UUID for pair 1 file
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string pair_file_2
+
+RFC 4122 UUID for pair 2 file
+
+=item * int rc_index
+
+If true barcodes in index file are reverse compliment of mapping file, default is false
+
+=item * string barcode_file
+
+RFC 4122 UUID for barcode mapping file
+
+=item * int retain
+
+If true retain non-overlapping sequences, default is false
+
+=item * string index_file
+
+RFC 4122 UUID for index file
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string status
+
+status message
+
+=item * string id
+
+user id
+
+=item * string user
+
+user login
+
+=item * string awe_id
+
+url/id of awe job
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=cut
+
+=head2 GetLibraryQuery
+
+=head3 Description
+
+A library of metagenomic samples from some environment
+Returns a set of data matching the query criteria.
+
+=head3 Parameters
+
+=over4
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+
+=item * string order
+
+This parameter value can be chosen from the following (the first being default):
+
+ id - return data objects ordered by id
+ name - return data objects ordered by name
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * int total_count
+
+total number of available data items
+
+=item * list<mapping<string, string>> data
+
+list of the library objects
+
+=head2 GetLibraryInstance
+
+=head3 Description
+
+A library of metagenomic samples from some environment
+Returns a single data object.
+
+=head3 Parameters
+
+=over4
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+ verbose - returns a standard subselection of metadata
+ full - returns all connected metadata
+
+=item * string id
+
+unique object identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int version
+
+version of the object
+
+=item * string sample
+
+reference to the related sample object
+
+=item * string project
+
+reference to the project object
+
+=item * string metagenome
+
+reference to the related metagenome object
+
+=item * mapping<string, string> metadata
+
+key value pairs describing metadata
+
+=item * string id
+
+unique object identifier
+
+=item * string name
+
+human readable identifier
+
+=item * string url
+
+resource location of this object instance
+
+=item * string created
+
+time the object was first created
+
+=cut
+
+=head2 GetM5nrOntology
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return functional hierarchy
+
+=head3 Parameters
+
+=over4
+
+=item * string filter
+
+text of ontology group (filter_level) to filter by
+
+=item * string min_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ function - bottom function ontology level
+ level3 - function ontology level
+ level2 - function ontology level
+ level1 - top function ontology level
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int exact
+
+if true return only those ontologies that exactly match filter, default is false
+
+=item * string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ function - bottom function ontology level
+ level3 - function ontology level
+ level2 - function ontology level
+ level1 - top function ontology level
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ Subsystems - ontology database, type ontology only
+ NOG - ontology database, type ontology only
+ COG - ontology database, type ontology only
+ KO - ontology database, type ontology only
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int version
+
+version of M5NR
+
+=item * string url
+
+resource location of this object instance
+
+=item * list<mapping<string, string>> data
+
+ontology object
+
+=head2 GetM5nrTaxonomy
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return organism hierarchy
+
+=head3 Parameters
+
+=over4
+
+=item * int exact
+
+if true return only those taxonomies that exactly match filter, default is false
+
+=item * string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+=item * int version
+
+M5NR version, default 10
+
+=item * string filter
+
+text of taxonomy group (filter_level) to filter by
+
+=item * string min_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string url
+
+resource location of this object instance
+
+=item * int version
+
+version of M5NR
+
+=item * list<mapping<string, string>> data
+
+taxonomy object
+
+=head2 GetM5nrSources
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return all sources in M5NR
+
+=head3 Parameters
+
+=over4
+
+=item * int version
+
+M5NR version, default 10
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int version
+
+version of M5NR
+
+=item * string url
+
+resource location of this object instance
+
+=item * list<mapping<string, string>> data
+
+source object
+
+=head2 GetM5nrAccession
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotation of given source protein ID
+
+=head3 Parameters
+
+=over4
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string id
+
+unique identifier from source DB
+
+=item * int limit
+
+maximum number of items requested
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * int total_count
+
+total number of available data items
+
+=head2 GetM5nrAlias
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for alias IDs containing the given text
+
+=head3 Parameters
+
+=over4
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string text
+
+text string of partial alias
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int exact
+
+if true return only those annotations that exactly match input text, default is false
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int total_count
+
+total number of available data items
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string url
+
+resource location of this object instance
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=head2 GetM5nrMd5
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotation(s) or sequence of given md5sum (M5NR ID)
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+unique identifier in form of md5 checksum
+
+=item * int limit
+
+maximum number of items requested
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int sequence
+
+if true return sequence output, else return annotation output, default is false
+
+=item * string format
+
+This parameter value can be chosen from the following (the first being default):
+
+ fasta - return sequences in fasta format
+ json - return sequences in json struct
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string url
+
+resource location of this object instance
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * int total_count
+
+total number of available data items
+
+=head2 GetM5nrFunction
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for function names containing the given text
+
+=head3 Parameters
+
+=over4
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * int exact
+
+if true return only those annotations that exactly match input text, default is false
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int limit
+
+maximum number of items requested
+
+=item * int inverse
+
+if true return only those annotations that do not match input text, default is false
+
+=item * string text
+
+text string of partial function name
+
+=item * int version
+
+M5NR version, default 10
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * int total_count
+
+total number of available data items
+
+=head2 GetM5nrOrganism
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for organism names containing the given text
+
+=head3 Parameters
+
+=over4
+
+=item * string tax_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ strain - bottom organism taxonomic level
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * int exact
+
+if true return only those annotations that exactly match input text, default is false
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string text
+
+text string of partial organism name
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int inverse
+
+if true return only those annotations that do not match input text, default is false
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int total_count
+
+total number of available data items
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=head2 GetM5nrSequence
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotation(s) for md5sum (M5NR ID) of given sequence
+
+=head3 Parameters
+
+=over4
+
+=item * string text
+
+text string of protein sequence
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * int limit
+
+maximum number of items requested
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int total_count
+
+total number of available data items
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string url
+
+resource location of this object instance
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=head2 PostM5nrAccession
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations of given source protein IDs
+
+=head3 Parameters
+
+=over4
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int version
+
+M5NR version, default 10
+
+=item * list<string> data
+
+unique identifier from source DB
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=item * int total_count
+
+total number of available data items
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=head2 PostM5nrAlias
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for aliases containing the given texts
+
+=head3 Parameters
+
+=over4
+
+=item * string source
+
+source name to restrict search by
+
+=item * list<string> data
+
+text string of partial alias ID
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int exact
+
+if true return only those annotations that exactly match input text, default is false
+
+=item * int version
+
+M5NR version, default 10
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * int total_count
+
+total number of available data items
+
+=head2 PostM5nrMd5
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations or sequences of given md5sums (M5NR ID)
+
+=head3 Parameters
+
+=over4
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string source
+
+source name to restrict search by
+
+=item * list<string> data
+
+unique identifier in form of md5 checksum
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * int sequence
+
+if true return sequence output, else return annotation output, default is false
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int version
+
+version of M5NR
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * int total_count
+
+total number of available data items
+
+=head2 PostM5nrFunction
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for function names containing the given texts
+
+=head3 Parameters
+
+=over4
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int inverse
+
+if true return only those annotations that do not match input text, default is false
+
+=item * int limit
+
+maximum number of items requested
+
+=item * list<string> data
+
+text string of partial function name
+
+=item * list<string> md5s
+
+md5 to constrain search by
+
+=item * int exact
+
+if true return only those annotations that exactly match input text, default is false
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * string source
+
+source name to restrict search by
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int version
+
+version of M5NR
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int total_count
+
+total number of available data items
+
+=item * string url
+
+resource location of this object instance
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=head2 PostM5nrOrganism
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for organism names containing the given texts
+
+=head3 Parameters
+
+=over4
+
+=item * list<string> md5s
+
+md5 to constrain search by
+
+=item * int limit
+
+maximum number of items requested
+
+=item * list<string> data
+
+text string of partial organism name
+
+=item * int inverse
+
+if true return only those annotations that do not match input text, default is false
+
+=item * int version
+
+M5NR version, default 10
+
+=item * string tax_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ strain - bottom organism taxonomic level
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * int exact
+
+if true return only those annotations that exactly match input text, default is false
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * int total_count
+
+total number of available data items
+
+=item * int version
+
+version of M5NR
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=head2 PostM5nrSequence
+
+=head3 Description
+
+M5NR provides data through a comprehensive non-redundant protein / rRNA database
+Return annotations for md5s (M5NR ID) of given sequences
+
+=head3 Parameters
+
+=over4
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string source
+
+source name to restrict search by
+
+=item * list<string> data
+
+text string of protein sequence
+
+=item * int limit
+
+maximum number of items requested
+
+=item * int version
+
+M5NR version, default 10
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int total_count
+
+total number of available data items
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * string url
+
+resource location of this object instance
+
+=item * list<mapping<string, string>> data
+
+annotation object
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of M5NR
+
+=cut
+
+=head2 GetMatrixOrganism
+
+=head3 Description
+
+A profile in biom format that contains abundance counts
+Returns a BIOM object.
+
+=head3 Parameters
+
+=over4
+
+=item * int evalue
+
+negative exponent value for maximum e-value cutoff: default is 5
+
+=item * int length
+
+value for minimum alignment length cutoff: default is 15
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ M5NR - comprehensive protein database
+ M5RNA - comprehensive RNA database
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+
+=item * string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ function - bottom function ontology level
+ level3 - function ontology level
+ level2 - function ontology level
+ level1 - top function ontology level
+
+=item * string hit_type
+
+This parameter value can be chosen from the following (the first being default):
+
+ all - returns results based on all organisms that map to top hit per read-feature
+ single - returns results based on a single organism for top hit per read-feature
+ lca - returns results based on the Least Common Ancestor for all organisms (M5NR+M5RNA only) that map to hits from a read-feature
+
+=item * string filter_source
+
+This parameter value can be chosen from the following (the first being default):
+
+ Subsystems - ontology database, type ontology only
+ NOG - ontology database, type ontology only
+ COG - ontology database, type ontology only
+ KO - ontology database, type ontology only
+
+=item * int hide_metadata
+
+if true do not return metagenome metadata in 'columns' object, default is false
+
+=item * string filter
+
+filter the return results to only include abundances based on genes with this function
+
+=item * string group_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ strain - bottom organism taxonomic level
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+=item * int asynchronous
+
+if true return process id to query status resource for results, default is false
+
+=item * int taxid
+
+if true, return annotation ID as NCBI tax id. Only for group_levels with a tax_id
+
+=item * string result_type
+
+This parameter value can be chosen from the following (the first being default):
+
+ abundance - number of reads with hits in annotation
+ evalue - average e-value exponent of hits in annotation
+ identity - average percent identity of hits in annotation
+ length - average alignment length of hits in annotation
+
+=item * int identity
+
+percent value for minimum % identity cutoff: default is 60
+
+=item * int version
+
+M5NR version, default 1
+
+=item * string grep
+
+filter the return results to only include annotations that contain this text
+
+=item * string id
+
+one or more metagenome or project unique identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string format
+
+format specification name
+
+=item * list<mapping<string, string>> rows
+
+rows object
+
+=item * string matrix_element_value
+
+result_type of the elements in the return matrix
+
+=item * list<mapping<string, string>> columns
+
+columns object
+
+=item * string url
+
+resource location of this object instance
+
+=item * string matrix_element_type
+
+data type of the elements in the return matrix
+
+=item * string date
+
+time the output data was generated
+
+=item * string generated_by
+
+identifier of the data generator
+
+=item * string type
+
+type of the data in the return table (taxon, function or gene)
+
+=item * string id
+
+unique object identifier
+
+=item * string format_url
+
+url to the format specification
+
+=item * list<list<float>> data
+
+the matrix values
+
+=item * list<int> shape
+
+list of the dimension sizes of the return matrix
+
+=item * string matrix_type
+
+type of the data encoding matrix (dense or sparse)
+
+=head2 GetMatrixFunction
+
+=head3 Description
+
+A profile in biom format that contains abundance counts
+Returns a BIOM object.
+
+=head3 Parameters
+
+=over4
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ Subsystems - ontology database, type ontology only
+ NOG - ontology database, type ontology only
+ COG - ontology database, type ontology only
+ KO - ontology database, type ontology only
+
+=item * int evalue
+
+negative exponent value for maximum e-value cutoff: default is 5
+
+=item * int length
+
+value for minimum alignment length cutoff: default is 15
+
+=item * int asynchronous
+
+if true return process id to query status resource for results, default is false
+
+=item * string group_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ function - bottom function ontology level
+ level3 - function ontology level
+ level2 - function ontology level
+ level1 - top function ontology level
+
+=item * string filter
+
+filter the return results to only include abundances based on genes with this organism
+
+=item * int hide_metadata
+
+if true do not return metagenome metadata in 'columns' object, default is false
+
+=item * string id
+
+one or more metagenome or project unique identifier
+
+=item * string grep
+
+filter the return results to only include annotations that contain this text
+
+=item * string filter_source
+
+This parameter value can be chosen from the following (the first being default):
+
+ M5NR - comprehensive protein database
+ M5RNA - comprehensive RNA database
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+
+=item * string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ strain - bottom organism taxonomic level
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+=item * int version
+
+M5NR version, default 1
+
+=item * string result_type
+
+This parameter value can be chosen from the following (the first being default):
+
+ abundance - number of reads with hits in annotation
+ evalue - average e-value exponent of hits in annotation
+ identity - average percent identity of hits in annotation
+ length - average alignment length of hits in annotation
+
+=item * int identity
+
+percent value for minimum % identity cutoff: default is 60
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string format_url
+
+url to the format specification
+
+=item * list<list<float>> data
+
+the matrix values
+
+=item * string id
+
+unique object identifier
+
+=item * string type
+
+type of the data in the return table (taxon, function or gene)
+
+=item * string matrix_type
+
+type of the data encoding matrix (dense or sparse)
+
+=item * list<int> shape
+
+list of the dimension sizes of the return matrix
+
+=item * list<mapping<string, string>> columns
+
+columns object
+
+=item * list<mapping<string, string>> rows
+
+rows object
+
+=item * string matrix_element_value
+
+result_type of the elements in the return matrix
+
+=item * string format
+
+format specification name
+
+=item * string generated_by
+
+identifier of the data generator
+
+=item * string date
+
+time the output data was generated
+
+=item * string matrix_element_type
+
+data type of the elements in the return matrix
+
+=item * string url
+
+resource location of this object instance
+
+=head2 GetMatrixFeature
+
+=head3 Description
+
+A profile in biom format that contains abundance counts
+Returns a BIOM object.
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+one or more metagenome or project unique identifier
+
+=item * int hide_metadata
+
+if true do not return metagenome metadata in 'columns' object, default is false
+
+=item * int hide_annotation
+
+if true do not return feature metadata in 'rows' object, default is false
+
+=item * string result_type
+
+This parameter value can be chosen from the following (the first being default):
+
+ abundance - number of reads with hits in annotation
+ evalue - average e-value exponent of hits in annotation
+ identity - average percent identity of hits in annotation
+ length - average alignment length of hits in annotation
+
+=item * int identity
+
+percent value for minimum % identity cutoff: default is 60
+
+=item * int version
+
+M5NR version, default 1
+
+=item * string filter_level
+
+This parameter value can be chosen from the following (the first being default):
+
+ strain - bottom organism taxonomic level
+ species - organism type level
+ genus - organism taxonomic level
+ family - organism taxonomic level
+ order - organism taxonomic level
+ class - organism taxonomic level
+ phylum - organism taxonomic level
+ domain - top organism taxonomic level
+
+=item * int evalue
+
+negative exponent value for maximum e-value cutoff: default is 5
+
+=item * int length
+
+value for minimum alignment length cutoff: default is 15
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+
+=item * string filter
+
+filter the return results to only include abundances based on genes with this organism
+
+=item * int asynchronous
+
+if true return process id to query status resource for results, default is false
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string generated_by
+
+identifier of the data generator
+
+=item * string date
+
+time the output data was generated
+
+=item * string url
+
+resource location of this object instance
+
+=item * string matrix_element_type
+
+data type of the elements in the return matrix
+
+=item * list<mapping<string, string>> columns
+
+columns object
+
+=item * list<mapping<string, string>> rows
+
+rows object
+
+=item * string matrix_element_value
+
+result_type of the elements in the return matrix
+
+=item * string format
+
+format specification name
+
+=item * string matrix_type
+
+type of the data encoding matrix (dense or sparse)
+
+=item * list<int> shape
+
+list of the dimension sizes of the return matrix
+
+=item * string format_url
+
+url to the format specification
+
+=item * list<list<float>> data
+
+the matrix values
+
+=item * string id
+
+unique object identifier
+
+=item * string type
+
+type of the data in the return table (taxon, function or gene)
+
+=cut
+
+=head2 GetMetadataTemplate
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns static template for metadata object relationships and types
+
+=head3 Parameters
+
+=over4
+
+This function has no parameters.
+
+=head3 Return Attributes
+
+=over4
+
+=item * mapping<string, string> library
+
+libraries and their metadata
+
+=item * mapping<string, string> sample
+
+samples and their metadata
+
+=item * mapping<string, string> project
+
+projects and their metadata
+
+=item * mapping<string, string> ep
+
+eps and their metadata
+
+=head2 GetMetadataCv
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns static controlled vocabularies used in metadata. By default returns all CVs at latest version. If label and version options used, returns those specific values.
+
+=head3 Parameters
+
+=over4
+
+=item * string label
+
+metadata label
+
+=item * string version
+
+version of CV ontology to use
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * mapping<string, string> ont_info
+
+term IDs for metadata
+
+=item * mapping<string, string> select
+
+list of CV terms for metadata
+
+=item * mapping<string, string> ontology
+
+list of CV terms for metadata
+
+=head2 GetMetadataOntology
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns static ontology used in metadata for the given name and version.
+
+=head3 Parameters
+
+=over4
+
+=item * string version
+
+version of ontology to use
+
+=item * string name
+
+ontology name
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * mapping<string, string> nodes
+
+info for ontology ID
+
+=item * string version
+
+version of this ontology
+
+=item * int showRoot
+
+option to show root when displaying
+
+=item * string rootNode
+
+ontology ID of root
+
+=item * string name
+
+ontology name
+
+=item * string type
+
+this type
+
+=head2 GetMetadataVersion
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns all versions available for given ontology name.
+
+=head3 Parameters
+
+=over4
+
+=item * string label
+
+metadata label
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<string> feature
+
+version number
+
+=item * list<string> biome
+
+version number
+
+=item * list<string> material
+
+version number
+
+=head2 GetMetadataView
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns list of unique metadata values for given label
+
+=head3 Parameters
+
+=over4
+
+=item * string label
+
+valid metadata label
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<string> values
+
+metadata value
+
+=item * string label
+
+metadata label
+
+=item * int total
+
+count of unique values
+
+=head2 GetMetadataExport
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Returns full nested metadata for a project in same format as template, or metadata for a single metagenome.
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+unique object identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string name
+
+human readable identifier
+
+=item * int sampleNum
+
+number of samples in project
+
+=item * string id
+
+unique object identifier
+
+=item * list<mapping<string, string>> samples
+
+sample object containing sample metadata, sample libraries, sample envPackage
+
+=item * mapping<string, string> data
+
+hash of metadata by label
+
+=head2 PostMetadataImport
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Create project with given metadata spreadsheet and metagenome IDs, either upload or shock node
+
+=head3 Parameters
+
+=over4
+
+=item * string metagenome
+
+unique metagenome ID
+
+=item * string node_id
+
+shock node ID of metadata spreadsheet
+
+=item * string upload
+
+xlsx or xls format spreadsheet with metadata
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string project
+
+unique object identifier
+
+=item * list<string> added
+
+ID of metagenome with metadata added
+
+=item * list<string> errors
+
+error message that may have occurred
+
+=head2 PostMetadataUpdate
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Update project with given metadata spreadsheet and metagenome IDs, either upload or shock node
+
+=head3 Parameters
+
+=over4
+
+=item * string node_id
+
+shock node ID of metadata spreadsheet
+
+=item * string upload
+
+xlsx or xls format spreadsheet with metadata
+
+=item * string project
+
+unique project identifier
+
+=item * string metagenome
+
+unique metagenome ID
+
+=item * int map_by_id
+
+option to map metadata from spreadsheet to metagenomes using ID, default is name
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<string> added
+
+ID of metagenome with metadata added
+
+=item * string project
+
+unique object identifier
+
+=item * list<string> errors
+
+error message that may have occurred
+
+=head2 PostMetadataValidate
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Validate given metadata spreadsheet, either upload or shock node
+
+=head3 Parameters
+
+=over4
+
+=item * string node_id
+
+shock node ID of metadata spreadsheet
+
+=item * string upload
+
+xlsx or xls format spreadsheet with metadata
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string message
+
+if not valid, reason why
+
+=item * int is_valid
+
+the metadata sheet is valid
+
+=item * mapping<string, string> metadata
+
+valid metadata object for project and its samples and libraries
+
+=head2 GetMetadataValidate
+
+=head3 Description
+
+Metagenomic metadata is data providing information about one or more aspects of a set sequences from a sample of some environment
+Validate given metadata value
+
+=head3 Parameters
+
+=over4
+
+=item * string label
+
+metadata label
+
+=item * string group
+
+This parameter value can be chosen from the following (the first being default):
+
+ mixs - label is part of MIxS (minimal) metadata
+ mims - label is part of MIMS (metagenome) metadata
+ migs - label is part of MIGS (genome) metadata
+
+=item * string value
+
+metadata value
+
+=item * string category
+
+This parameter value can be chosen from the following (the first being default):
+
+ project - label belongs to project metadata
+ sample - label belongs to sample metadata
+ library - label belongs to library metadata
+ env_package - label belongs to env_package metadata
+
+=item * string version
+
+version of CV ontology to use
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string message
+
+if not valid, reason why
+
+=item * int is_valid
+
+the inputed value is valid for the given category and label
+
+=cut
+
+=head2 GetMetagenomeQuery
+
+=head3 Description
+
+A metagenome is an analyzed set sequences from a sample of some environment
+Returns a set of data matching the query criteria.
+
+=head3 Parameters
+
+=over4
+
+=item * string direction
+
+This parameter value can be chosen from the following (the first being default):
+
+ asc - sort by ascending order
+ desc - sort by descending order
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * string organism
+
+search parameter: query string for organism
+
+=item * string order
+
+metagenome object field to sort by (default is id)
+
+=item * string function
+
+search parameter: query string for function
+
+=item * int limit
+
+maximum number of items requested
+
+=item * string metadata
+
+search parameter: query string for any metadata field
+
+=item * string md5
+
+search parameter: md5 checksum of feature sequence
+
+=item * string status
+
+This parameter value can be chosen from the following (the first being default):
+
+ both - returns all data (public and private) user has access to view
+ public - returns all public data
+ private - returns private data user has access to view
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+ mixs - returns all GSC MIxS metadata
+ metadata - returns minimal with metadata
+ stats - returns minimal with statistics
+ full - returns all metadata and statistics
+
+=item * string match
+
+This parameter value can be chosen from the following (the first being default):
+
+ all - return metagenomes that match all search parameters
+ any - return metagenomes that match any search parameters
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int total_count
+
+total number of available data items
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string url
+
+resource location of this object instance
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * list<mapping<string, string>> data
+
+metagenome object
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int version
+
+version of the object
+
+=head2 GetMetagenomeInstance
+
+=head3 Description
+
+A metagenome is an analyzed set sequences from a sample of some environment
+Returns a single data object.
+
+=head3 Parameters
+
+=over4
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+ metadata - returns minimal with metadata
+ stats - returns minimal with statistics
+ full - returns all metadata and statistics
+
+=item * string id
+
+unique object identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int version
+
+version of the metagenome
+
+=item * string sample
+
+reference to the related sample object
+
+=item * mapping<string, string> pipeline_parameters
+
+key value pairs describing pipeline parameters
+
+=item * string project
+
+reference to the project object
+
+=item * string sequence_type
+
+sequencing type
+
+=item * string name
+
+name of metagenome
+
+=item * mapping<string, string> metadata
+
+key value pairs describing all metadata
+
+=item * string id
+
+unique metagenome identifier
+
+=item * string status
+
+ARRAY(0x2208378)
+
+=item * string library
+
+reference to the related library object
+
+=item * string url
+
+resource location of this object instance
+
+=item * mapping<string, string> statistics
+
+key value pairs describing statistics
+
+=item * mapping<string, string> mixs
+
+key value pairs describing MIxS metadata
+
+=item * string created
+
+time the metagenome was first created
+
+=cut
+
+=head2 GetProfileInstance
+
+=head3 Description
+
+A profile in biom format that contains abundance and similarity values
+Returns a single data object in BIOM format
+
+=head3 Parameters
+
+=over4
+
+=item * string hit_type
+
+This parameter value can be chosen from the following (the first being default):
+
+ all - returns results based on all organisms that map to top hit per read-feature
+ single - returns results based on a single organism for top hit per read-feature
+ lca - returns results based on the Least Common Ancestor for all organisms (M5NR+M5RNA only) that map to hits from a read-feature
+
+=item * string type
+
+This parameter value can be chosen from the following (the first being default):
+
+ organism - return organism data
+ function - return functional data
+ feature - return feature data
+
+=item * string id
+
+unique object identifier
+
+=item * int identity
+
+percent value for minimum % identity cutoff: default is 60
+
+=item * int evalue
+
+negative exponent value for maximum e-value cutoff: default is 5
+
+=item * int length
+
+value for minimum alignment length cutoff: default is 15
+
+=item * string source
+
+This parameter value can be chosen from the following (the first being default):
+
+ M5NR - comprehensive protein database
+ RefSeq - protein database, type organism, function, feature
+ GenBank - protein database, type organism, function, feature
+ IMG - protein database, type organism, function, feature
+ SEED - protein database, type organism, function, feature
+ TrEMBL - protein database, type organism, function, feature
+ SwissProt - protein database, type organism, function, feature
+ PATRIC - protein database, type organism, function, feature
+ KEGG - protein database, type organism, function, feature
+ M5RNA - comprehensive RNA database
+ RDP - RNA database, type organism, function, feature
+ Greengenes - RNA database, type organism, function, feature
+ LSU - RNA database, type organism, function, feature
+ SSU - RNA database, type organism, function, feature
+ Subsystems - ontology database, type ontology only
+ NOG - ontology database, type ontology only
+ COG - ontology database, type ontology only
+ KO - ontology database, type ontology only
+
+=item * int nocutoff
+
+if true, get data using no cutoffs
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<mapping<string, string>> columns
+
+columns object
+
+=item * string format
+
+format specification name
+
+=item * list<mapping<string, string>> rows
+
+rows object
+
+=item * string generated_by
+
+identifier of the data generator
+
+=item * string matrix_element_type
+
+data type of the elements in the return matrix
+
+=item * string date
+
+time the output data was generated
+
+=item * string id
+
+unique object identifier
+
+=item * list<list<float>> data
+
+the matrix values
+
+=item * string format_url
+
+url to the format specification
+
+=item * string type
+
+type of the data in the return table (taxon, function or gene)
+
+=item * string matrix_type
+
+type of the data encoding matrix (dense or sparse)
+
+=item * list<int> shape
+
+list of the dimension sizes of the return matrix
+
+=cut
+
+=head2 GetProjectQuery
+
+=head3 Description
+
+A project is a composition of samples, libraries and metagenomes being analyzed in a global context.
+Returns a set of data matching the query criteria.
+
+=head3 Parameters
+
+=over4
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+ verbose - returns all metadata
+ full - returns all metadata and references
+
+=item * string order
+
+This parameter value can be chosen from the following (the first being default):
+
+ id - return data objects ordered by id
+ name - return data objects ordered by name
+
+=item * int limit
+
+maximum number of items requested
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * list<mapping<string, string>> data
+
+list of the project objects
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * int total_count
+
+total number of available data items
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=head2 GetProjectInstance
+
+=head3 Description
+
+A project is a composition of samples, libraries and metagenomes being analyzed in a global context.
+Returns a single data object.
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+unique object identifier
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+ verbose - returns all metadata
+ full - returns all metadata and references
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * mapping<string, string> metadata
+
+key value pairs describing metadata
+
+=item * string id
+
+unique object identifier
+
+=item * string status
+
+ARRAY(0x22156a0)
+
+=item * string name
+
+human readable identifier
+
+=item * int version
+
+version of the object
+
+=item * string created
+
+time the object was first created
+
+=item * string description
+
+a short, comprehensive description of the project
+
+=item * string pi
+
+the first and last name of the principal investigator of the project
+
+=item * string funding_source
+
+the official name of the source of funding of this project
+
+=item * string url
+
+resource location of this object instance
+
+=cut
+
+=head2 GetSampleQuery
+
+=head3 Description
+
+A metagenomic sample from some environment.
+Returns a set of data matching the query criteria.
+
+=head3 Parameters
+
+=over4
+
+=item * int offset
+
+zero based index of the first data object to be returned
+
+=item * string order
+
+This parameter value can be chosen from the following (the first being default):
+
+ id - return data objects ordered by id
+ name - return data objects ordered by name
+
+=item * int limit
+
+maximum number of items requested
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string next
+
+link to the previous set or null if this is the first set
+
+=item * int offset
+
+zero based index of the first returned data item
+
+=item * string prev
+
+link to the next set or null if this is the last set
+
+=item * list<mapping<string, string>> data
+
+list of sample objects
+
+=item * int total_count
+
+total number of available data items
+
+=item * int limit
+
+maximum number of data items returned, default is 10
+
+=item * string order
+
+name of the attribute the returned data is ordered by
+
+=head2 GetSampleInstance
+
+=head3 Description
+
+A metagenomic sample from some environment.
+Returns a single data object.
+
+=head3 Parameters
+
+=over4
+
+=item * string verbosity
+
+This parameter value can be chosen from the following (the first being default):
+
+ minimal - returns only minimal information
+ verbose - returns all metadata
+ full - returns all metadata and references
+
+=item * string id
+
+unique object identifier
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string project
+
+reference to the project of this sample
+
+=item * int version
+
+version of the object
+
+=item * mapping<string, string> metadata
+
+key value pairs describing metadata
+
+=item * string id
+
+unique object identifier
+
+=item * string name
+
+human readable identifier
+
+=item * mapping<string, string> env_package
+
+environmental package object
+
+=item * string url
+
+resource location of this object instance
+
+=item * string created
+
+time the object was first created
+
+=cut
+
+=head2 GetServerInstance
+
+=head3 Description
+
+The server resource returns information about a server.
+Returns a single user object.
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+unique server ID
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int public_metagenomes
+
+total number of public metagenomes
+
+=item * string version
+
+version number of the server
+
+=item * string status
+
+status of the server
+
+=item * string id
+
+unique identifier of this server
+
+=item * string info
+
+informational text, i.e. downtime warnings
+
+=item * string url
+
+resource location of this object instance
+
+=item * int basepairs
+
+total number of basepairs
+
+=item * int sequences
+
+total number of sequences
+
+=item * int metagenomes
+
+total number of metagenomes
+
+=cut
+
+=head2 GetSubmissionList
+
+=head3 Description
+
+submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+list all submissions by user
+
+=head3 Parameters
+
+=over4
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string user
+
+user id
+
+=item * list<mapping<string, string>> submissions
+
+submission object
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=head2 GetSubmissionStatus
+
+=head3 Description
+
+submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+get status of submission from ID
+
+=head3 Parameters
+
+=over4
+
+=item * int full
+
+if true show full document of running jobs, default is summary
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * string uuid
+
+RFC 4122 UUID for submission
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string id
+
+RFC 4122 UUID for submission
+
+=item * string user
+
+user id
+
+=item * string status
+
+status message
+
+=head2 DeleteSubmissionDelete
+
+=head3 Description
+
+submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+delete all files and running processes for given submission ID
+
+=head3 Parameters
+
+=over4
+
+=item * string uuid
+
+RFC 4122 UUID for submission
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * int full
+
+if true delete all files and metagenomes in mgrast for submission, default just data in inbox
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=item * string user
+
+user id
+
+=item * string id
+
+RFC 4122 UUID for submission
+
+=item * string status
+
+status message
+
+=head2 PostSubmissionSubmit
+
+=head3 Description
+
+submission runs input through a series of validation and pre-processing steps, then submits the results to the MG-RAST anaylsis pipeline
+start new submission
+
+=head3 Parameters
+
+=over4
+
+=item * string priority
+
+This parameter value can be chosen from the following (the first being default):
+
+ never
+ Data will stay private (default)
+
+=item * string pair_file_1
+
+RFC 4122 UUID for pair 1 file
+
+=item * int retain
+
+If true retain non-overlapping sequences, default is false
+
+=item * string multiplex_file
+
+RFC 4122 UUID for file to demultiplex
+
+=item * string mg_name
+
+name of metagenome for pair-join
+
+=item * string index_file
+
+RFC 4122 UUID for index (barcode) file
+
+=item * string barcode_file
+
+RFC 4122 UUID for barcode mapping file
+
+=item * string pair_file_2
+
+RFC 4122 UUID for pair 2 file
+
+=item * int dereplicate
+
+if true run dereplication, default is true
+
+=item * int min_qual
+
+quality threshold for low-quality bases, default is 15
+
+=item * int filter_ambig
+
+if true run sequence ambiguous bp filtering, default is true
+
+=item * string auth
+
+unique string of text generated by MG-RAST for your account
+
+=item * int debug
+
+if true return workflow document instead of submitting
+
+=item * list<string> seq_files
+
+RFC 4122 UUID for sequence file
+
+=item * int max_lqb
+
+maximum number of low-quality bases per read, default is 5
+
+=item * string screen_indexes
+
+This parameter value can be chosen from the following (the first being default):
+
+ h_sapiens
+ Homo sapiens (default)
+
+=item * int max_ambig
+
+maximum ambiguous bps to allow through per sequence, default is 5
+
+=item * string project_id
+
+unique MG-RAST project identifier
+
+=item * int dynamic_trim
+
+if true run qual score dynamic trimmer, default is true
+
+=item * string project_name
+
+unique MG-RAST project name
+
+=item * float filter_ln_mult
+
+sequence length filtering multiplier, default is 2.0
+
+=item * int filter_ln
+
+if true run sequence length filtering, default is true
+
+=item * int bowtie
+
+if true run bowtie screening, default is true
+
+=item * string metadata_file
+
+RFC 4122 UUID for metadata file
+
+=item * int assembled
+
+if true sequences are assembeled, default is false
+
+=item * int rc_index
+
+If true barcodes in index file are reverse compliment of mapping file, default is false
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * string status
+
+status message
+
+=item * string user
+
+user id
+
+=item * string id
+
+RFC 4122 UUID for submission
+
+=item * string timestamp
+
+timestamp for return of this query
+
+=cut
+
+=head2 GetValidationTemplate
+
+=head3 Description
+
+validates templates for correct structure and data to fit a valid template
+Checks if the referenced JSON structure is a valid template
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+SHOCK template id
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int valid
+
+boolean indicating whether the examined template is valid or not
+
+=head2 GetValidationData
+
+=head3 Description
+
+validates templates for correct structure and data to fit a valid template
+Returns a single data object.
+
+=head3 Parameters
+
+=over4
+
+=item * string id
+
+SHOCK data id
+
+=item * string template
+
+SHOCK template id, default is MG-RAST metagenome metadata template
+
+
+=back
+
+=head3 Return Attributes
+
+=over4
+
+=item * int valid
+
+boolean indicating whether the examined template is valid or not
+
+=cut
+
